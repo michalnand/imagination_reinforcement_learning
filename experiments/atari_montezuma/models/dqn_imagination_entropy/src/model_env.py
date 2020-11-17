@@ -29,7 +29,7 @@ class ResidualBlock(torch.nn.Module):
 
 class Model(torch.nn.Module):
 
-    def __init__(self, input_shape, outputs_count, kernels_count = 64):
+    def __init__(self, input_shape, outputs_count, kernels_count = 32):
         super(Model, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,7 +51,6 @@ class Model(torch.nn.Module):
             
             ResidualBlock(kernels_count),
             ResidualBlock(kernels_count),
-            ResidualBlock(kernels_count)
         ]
 
         self.layers_decoder = [

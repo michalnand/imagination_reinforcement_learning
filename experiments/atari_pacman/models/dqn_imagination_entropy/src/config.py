@@ -15,7 +15,7 @@ class Config():
         self.experience_replay_size = 32768
  
         
-        self.imagination_rollouts   = 16
+        self.imagination_rollouts   = 8
         self.imagination_steps      = 1
 
         self.entropy_beta           = 10.0
