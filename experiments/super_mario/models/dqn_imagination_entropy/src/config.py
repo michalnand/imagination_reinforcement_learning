@@ -19,6 +19,6 @@ class Config():
         self.imagination_steps      = 1
 
         self.entropy_beta           = 10.0
-        self.curiosity_beta         = 10.0
+        self.curiosity_beta         = 1.0
         
         self.env_learning_rate      = 0.0002
