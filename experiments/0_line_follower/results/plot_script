@@ -1,0 +1,45 @@
+set   autoscale                        # scale axes automatically
+unset log                              # remove any log-scaling
+unset label                            # remove any previous labels
+set xtic auto                         	# set xtics automatically
+set ytic auto                         # set ytics automatically
+set ztic auto
+
+
+set grid ytics lt 0.1 lw 0.1 lc rgb "#bbbbbb"
+set grid xtics lt 0.1 lw 0.1 lc rgb "#bbbbbb"
+
+#set terminal png size 2048,1356 enhanced font "Helvetica,20"
+set terminal png size 1024,768 
+
+set key right bottom
+
+# set style fill solid 1.0
+
+set xlabel "iterations"
+set ylabel "total score"
+set output 'training_score_total.png'
+
+plot '../models/ddpg/result/result.log' using 1:4 title 'DDPG'  with lines lc 'blue' lw 3, \
+     '../models/ddpg_imagination/result/result.log' using 1:4 title 'DDPG : imagination' with lines lc 'green' lw 3, \
+     '../models/ddpg_imagination_meta_actor_critic/result/result.log' using 1:4 title 'DDPG : imagination meta actor' with lines lc 'red' lw 3
+
+
+
+set xlabel "iterations" 
+set ylabel "score per iteration"
+set output 'training_score_per_iterations.png'
+
+plot '../models/ddpg/result/result.log' using 1:($4/$1) title 'DDPG'  with lines lc 'blue' lw 3, \
+     '../models/ddpg_imagination/result/result.log' using 1:($4/$1) title 'DDPG : imagination' with lines lc 'green' lw 3, \
+     '../models/ddpg_imagination_meta_actor_critic/result/result.log' using 1:($4/$1) title 'DDPG : imagination meta actor' with lines lc 'red' lw 3
+
+
+
+set xlabel "episodes" 
+set ylabel "score per episode"
+set output 'training_score_per_episode.png'
+
+plot '../models/ddpg/result/result.log' using 2:5 title 'DDPG'  with lines lc 'blue' lw 3, \
+     '../models/ddpg_imagination/result/result.log' using 2:5 title 'DDPG : imagination' with lines lc 'green' lw 3, \
+     '../models/ddpg_imagination_meta_actor_critic/result/result.log' using 2:5 title 'DDPG : imagination meta actor' with lines lc 'red' lw 3

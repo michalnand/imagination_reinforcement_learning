@@ -1,0 +1,133 @@
+digraph {
+	graph [size="16.65,16.65"]
+	node [align=left fontsize=12 height=0.2 ranksep=0.1 shape=box style=filled]
+	4818901040 [label=HebbianLinearFuncBackward fillcolor=darkolivegreen1]
+	4819156688 -> 4818901040
+	4819156688 [label=ReluBackward0]
+	4818900816 -> 4819156688
+	4818900816 [label=HebbianLinearFuncBackward]
+	4819226768 -> 4818900816
+	4819226768 [label=ReluBackward0]
+	4818900368 -> 4819226768
+	4818900368 [label=HebbianLinearFuncBackward]
+	4819227216 -> 4818900368
+	4819227216 [label="
+ (50, 30)" fillcolor=lightblue]
+	4819226832 -> 4818900368
+	4819226832 [label="
+ (50)" fillcolor=lightblue]
+	4819227280 -> 4818900368
+	4819227280 [label=AddBackward0]
+	4819227472 -> 4819227280
+	4819227472 [label=AddBackward0]
+	4819227536 -> 4819227472
+	4819227536 [label=AddBackward0]
+	4819227600 -> 4819227536
+	4819227600 [label=AddBackward0]
+	4819228176 -> 4819227600
+	4819228176 [label=MulBackward0]
+	4819228304 -> 4819228176
+	4819228304 [label="
+ (50, 30)" fillcolor=lightblue]
+	4819228048 -> 4819227536
+	4819228048 [label=MulBackward0]
+	4819228240 -> 4819228048
+	4819228240 [label="
+ (50, 30)" fillcolor=lightblue]
+	4819227728 -> 4819227472
+	4819227728 [label=MulBackward0]
+	4819228112 -> 4819227728
+	4819228112 [label="
+ (50, 30)" fillcolor=lightblue]
+	4819227408 -> 4819227280
+	4819227408 [label="
+ (50, 30)" fillcolor=lightblue]
+	4819213680 -> 4818900368
+	4819213680 [label="(1, 30)" fillcolor=orange]
+	4819212800 -> 4818900368
+	4819212800 [label="(50, 30)" fillcolor=orange]
+	4819213760 -> 4818900368
+	4819213760 [label="(50)" fillcolor=orange]
+	4819213840 -> 4818900368
+	4819213840 [label="(1, 50, 30)" fillcolor=orange]
+	4819226896 -> 4818900816
+	4819226896 [label="
+ (50, 50)" fillcolor=lightblue]
+	4819226960 -> 4818900816
+	4819226960 [label="
+ (50)" fillcolor=lightblue]
+	4819227024 -> 4818900816
+	4819227024 [label=AddBackward0]
+	4819227344 -> 4819227024
+	4819227344 [label=AddBackward0]
+	4819227792 -> 4819227344
+	4819227792 [label=AddBackward0]
+	4819228496 -> 4819227792
+	4819228496 [label=AddBackward0]
+	4819228688 -> 4819228496
+	4819228688 [label=MulBackward0]
+	4819228816 -> 4819228688
+	4819228816 [label="
+ (50, 50)" fillcolor=lightblue]
+	4819227920 -> 4819227792
+	4819227920 [label=MulBackward0]
+	4819228752 -> 4819227920
+	4819228752 [label="
+ (50, 50)" fillcolor=lightblue]
+	4819227664 -> 4819227344
+	4819227664 [label=MulBackward0]
+	4819228624 -> 4819227664
+	4819228624 [label="
+ (50, 50)" fillcolor=lightblue]
+	4819227152 -> 4819227024
+	4819227152 [label="
+ (50, 50)" fillcolor=lightblue]
+	4819231840 -> 4818900816
+	4819231840 [label="(1, 50)" fillcolor=orange]
+	4819230960 -> 4818900816
+	4819230960 [label="(50, 50)" fillcolor=orange]
+	4819231920 -> 4818900816
+	4819231920 [label="(50)" fillcolor=orange]
+	4819232000 -> 4818900816
+	4819232000 [label="(1, 50, 50)" fillcolor=orange]
+	4819156752 -> 4818901040
+	4819156752 [label="
+ (10, 50)" fillcolor=lightblue]
+	4819156816 -> 4818901040
+	4819156816 [label="
+ (10)" fillcolor=lightblue]
+	4819156880 -> 4818901040
+	4819156880 [label=AddBackward0]
+	4819227088 -> 4819156880
+	4819227088 [label=AddBackward0]
+	4819228432 -> 4819227088
+	4819228432 [label=AddBackward0]
+	4819229008 -> 4819228432
+	4819229008 [label=AddBackward0]
+	4819229200 -> 4819229008
+	4819229200 [label=MulBackward0]
+	4819229328 -> 4819229200
+	4819229328 [label="
+ (10, 50)" fillcolor=lightblue]
+	4819228560 -> 4819228432
+	4819228560 [label=MulBackward0]
+	4819229264 -> 4819228560
+	4819229264 [label="
+ (10, 50)" fillcolor=lightblue]
+	4819228368 -> 4819227088
+	4819228368 [label=MulBackward0]
+	4819229136 -> 4819228368
+	4819229136 [label="
+ (10, 50)" fillcolor=lightblue]
+	4819226704 -> 4819156880
+	4819226704 [label="
+ (10, 50)" fillcolor=lightblue]
+	4819233520 -> 4818901040
+	4819233520 [label="(1, 50)" fillcolor=orange]
+	4819232640 -> 4818901040
+	4819232640 [label="(10, 50)" fillcolor=orange]
+	4819233600 -> 4818901040
+	4819233600 [label="(10)" fillcolor=orange]
+	4819233680 -> 4818901040
+	4819233680 [label="(1, 10, 50)" fillcolor=orange]
+}

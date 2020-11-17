@@ -1,0 +1,2 @@
+python3 dqn_noisy_resnet.py
+python3 dqn_imagination_entropy.py

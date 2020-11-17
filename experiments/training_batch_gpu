@@ -1,0 +1,16 @@
+cd atari_solaris
+./training_batch
+cd ..
+
+cd atari_pacman
+./training_batch
+cd .. 
+
+cd atari_montezuma
+./training_batch
+cd ..
+
+cd super_mario
+./training_batch
+cd ..
+

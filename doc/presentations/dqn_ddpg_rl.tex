@@ -1,0 +1,530 @@
+\documentclass[xcolor=dvipsnames]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,slovak]{babel}
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usetheme{Pittsburgh}
+\useoutertheme{shadow}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\usepackage[]{algorithm2e}
+\usepackage{listings}
+ \setbeamercovered{transparent}
+ \usepackage{cuted}
+\usepackage[export]{adjustbox}
+\usepackage{mathtools}
+
+\usepackage{lipsum}
+\usepackage{verbatim}
+\usepackage{transparent}
+\usepackage{framed}
+\usepackage{xcolor}
+
+\usepackage{multirow}
+\usepackage{colortbl}
+\usepackage{lmodern}
+
+\usepackage{movie15}
+\usepackage{media9}
+\usepackage{verbatim}
+
+\usepackage{animate}
+
+
+\usepackage{hyperref}
+
+\newcommand\Wider[2][3em]{%
+\makebox[\linewidth][c]{%
+  \begin{minipage}{\dimexpr\textwidth+#1\relax}
+  \raggedright#2
+  \end{minipage}%
+  }%
+}
+
+
+
+
+
+
+\iftrue
+
+\usetheme{Warsaw}
+
+\setbeamercolor{normal text}{fg=white,bg=black!90}
+\setbeamercolor{structure}{fg=white}
+
+\setbeamercolor{alerted text}{fg=red!85!black}
+
+\setbeamercolor{item projected}{use=item,fg=black,bg=item.fg!35}
+
+\setbeamercolor*{palette primary}{use=structure,fg=structure.fg}
+\setbeamercolor*{palette secondary}{use=structure,fg=structure.fg!95!black}
+\setbeamercolor*{palette tertiary}{use=structure,fg=structure.fg!90!black}
+\setbeamercolor*{palette quaternary}{use=structure,fg=structure.fg!95!black,bg=black!80}
+
+\setbeamercolor*{framesubtitle}{fg=white}
+
+\setbeamercolor*{block title}{parent=structure,bg=black!60}
+\setbeamercolor*{block body}{fg=black,bg=black!10}
+\setbeamercolor*{block title alerted}{parent=alerted text,bg=black!15}
+\setbeamercolor*{block title example}{parent=example text,bg=black!15}
+
+\fi
+
+
+
+%-------------------------------------------------------------------------------------
+\title{\color{white} \bf deep reinforcement learning 1 - DQN and DDPG}
+\author{\color{white} Michal CHOVANEC, PhD}
+
+
+%\setbeamertemplate{footline}[frame number]{}
+\setbeamertemplate{navigation symbols}{}
+
+
+\date[EURP]{}
+\begin{document}
+
+{
+    \usebackgroundtemplate
+    {
+        \vbox to \paperheight{\vfil\hbox to \paperwidth{\hfil
+
+        {\includegraphics[width=5.05in]{../images/rl_square.jpg}}
+
+        \hfil}\vfil}
+    }
+
+
+
+    \begin{frame}
+
+    \centering
+     \colorbox{black}
+     {
+        \begin{minipage}{8cm}
+           {\LARGE \color{white}deep reinforcement learning 1} \\
+           {\Large \color{white}- deep Q networks} \\
+           {\Large \color{white}- deep deterministic policy gradient} \\
+           {\LARGE \color{white} Michal CHOVANEC} \\
+       \end{minipage}
+     }
+
+    \end{frame}
+}
+
+
+\begin{frame}{\bf reinforcement learning}
+
+  \begin{columns}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[scale=0.35]{../images/breakout.png}}
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[scale=0.3]{../images/pacman.png}}
+    \end{column}
+
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{\bf reinforcement learning}
+
+  \begin{columns}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[scale=0.2]{../images/ant.png}}
+      \centering{\includegraphics[scale=0.1]{../images/sac_car.jpg}}
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[scale=0.03]{../images/go.jpg}}
+      \centering{\includegraphics[scale=0.1]{../images/sac_minitaur.jpg}}
+    \end{column}
+
+
+  \end{columns}
+
+\end{frame}
+
+
+
+
+
+\begin{frame}{\bf reinforcement learning}
+
+  {\bf learning from punishments and rewards \\}
+  \centering{\includegraphics[scale=0.2]{../diagrams/basic/reinforcementlearning.png}}
+
+\end{frame}
+
+
+\begin{frame}{\bf reinforcement learning}
+
+  \begin{columns}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[scale=0.15]{../diagrams/basic/reinforcementlearning.png}}
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item obtain state
+        \item select action
+        \item exectute action
+        \item learn from experiences
+      \end{itemize}
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+
+\begin{frame}{\bf reinforcement learning - algorithms}
+   \begin{itemize}
+    \item discrete actions space
+
+        \begin{itemize}
+          \item Deep Q-network, DQN
+          \item Dueling DQN
+          \item Reinbow DQN
+        \end{itemize}
+
+    \item continuous actions space
+    
+        \begin{itemize}
+          \item Actor Critic
+          \item Advantage Actor Critic
+          \item Proximal policy optimization
+          \item Soft Actor critic
+          \item Deep deterministc policy gradient
+          \item D4PG, SDDPG
+        \end{itemize}
+
+    \item model based
+    
+        \begin{itemize}
+          \item curiosity
+          \item world models
+          \item imagination agents
+        \end{itemize}
+
+  \end{itemize}
+
+  f.e. SDDPG - sampled DDPG, based on Wasserstein loss : Optimal transport, Cédric Villani, 600+ pages
+
+\end{frame}
+
+
+
+\begin{frame}{\bf action space}
+
+  \begin{itemize}
+    \item discrete action space \\
+      - keys, keypad
+    \item continuous action space \\
+      - motors, PWMs, steering, force controll
+  \end{itemize}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/basic/actionspace.png}}
+
+\end{frame}
+
+
+\begin{frame}{\bf deep Q learning}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/basic/deepqnetwork.png}}
+
+  \begin{enumerate}
+    \item play games
+    \item store transitions into buffer \\
+      - state, action, reward, done
+    \item learn from buffer
+  \end{enumerate}
+\end{frame}
+
+
+\begin{frame}{\bf deep Q learning}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/basic/deepqlearning.png}}
+
+\end{frame}
+
+
+\begin{frame}{\bf deep Q learning}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/basic/deepqlearningdetail.png}}
+
+  \begin{align*}
+    Q(s, a; \theta) = \underset{\textcolor{cyan}{reward}}{R} + \underset{\textcolor{OrangeRed}{discounted\ future\ reward}}{\gamma \max \limits_{a'} Q(s', a'; \theta^-)}
+  \end{align*}
+
+  \begin{align*}
+    \mathcal{L(\theta)} = \left( R + \gamma \max \limits_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta)  \right)^2
+  \end{align*}
+\end{frame}
+
+
+\begin{frame}{\bf deep Q learning}
+
+  \centering{\includegraphics[scale=0.12]{../diagrams/basic/qlearning.png}}
+
+  \begin{align*}
+    Q(s, a; \theta) = \underset{\textcolor{cyan}{reward}}{R} + \underset{\textcolor{OrangeRed}{discounted\ future\ reward}}{\gamma \max \limits_{a'} Q(s', a'; \theta^-)}
+  \end{align*}
+
+  \begin{align*}
+    \mathcal{L(\theta)} = \left( R + \gamma \max \limits_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta)  \right)^2
+  \end{align*}
+\end{frame}
+
+\begin{frame}{\bf dqn code}
+
+  \centering{\includegraphics[scale=0.35]{../images/dqn_code.png}}
+  
+  
+\end{frame}
+
+
+\begin{frame}{\bf model architecture}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/architectures/dqnbasic.png}}
+
+  \begin{itemize}
+    \item input 96x96 grayscale, 4 stacked frames
+    \item 3x3 convs + pooling
+    \item two fully connected layers
+    \item small learning rate $\eta = 0.0001$, batch size = 32
+    \item $\gamma = 0.99$
+    \item exploration $\epsilon$-greedy, 1M samples linear decay from 1 to 0.05
+    \item total training 10M samples
+  \end{itemize}
+ 
+\end{frame}
+
+
+
+
+
+
+\begin{frame}{\bf dueling DQN, model architecture}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/architectures/duelingdqn.png}}
+
+  \begin{align*}
+    Q(s, a) &= V(s) + A(s, a) \\
+    Q(s, a) &= V(s) + A(s, a) - \frac{1}{|\mathcal{A}|}\sum_{a' \in \mathcal{A}}A(s, a')
+  \end{align*}
+
+  \centering{\includegraphics[scale=0.5]{../images/dueling_dqn_code.png}}
+
+\end{frame}
+
+
+
+
+\begin{frame}{\bf noisy layers for exploration}
+
+
+\centering{\bf {action space noise}}
+
+\centering{\includegraphics[scale=0.15]{../diagrams/architectures/noisylayerbasic.png}}
+
+\centering{\bf {parameter space noise}}
+
+\centering{\includegraphics[scale=0.15]{../diagrams/architectures/noisylayerparameter.png}}
+
+\end{frame}
+
+
+
+\begin{frame}{\bf model architecture}
+
+   \begin{columns}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[scale=0.3]{../images/model_dqn_code.png}}
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      \centering{\includegraphics[angle=270, scale=0.1]{../diagrams/architectures/duelingdqn.png}}
+    \end{column}
+
+  \end{columns}
+ 
+\end{frame}
+
+
+
+
+\begin{frame}{\bf results on MsPacman}
+
+\centering{\includegraphics[scale=0.5]{../../experiments/5_pacman/results/score_per_episode.png}}
+
+\end{frame}
+
+
+\begin{frame}{\bf wise Wizard's DQN spell chart}
+  \begin{itemize}
+    \item use {\bf \color{red} input} with nice size $k2^j$, 64, 96, 128 ...
+    \item {\bf \color{red} conv layers} use 3x3 convs, poolings or strides > 1
+    \item for {\bf \color{red} weight init} use Xavier
+    \item {\bf \color{red} dont use} batchnorm (use SkipInit - not tested yet),
+    \item {\bf \color{red} dont use} weight regularisation
+    \item use {\bf \color{red} soft} target network update, $\tau = 0.001$
+    \item slow learning rate $\eta = 0.0001$ works better
+    \item for exploration use $\epsilon$-greedy decay from 1.0 to 0.05 in 1M steps, or use noisy layers
+  \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{\bf DDPG}
+
+  {\bf deep deterministic policy gradietnt}
+
+  \begin{itemize}
+    \item continuous action space
+    \item natural extension of DQN
+    \item actor-critic structure
+  \end{itemize}
+
+  \centering{\includegraphics[scale=0.15]{../diagrams/basic/ddpgnetwork.png}}
+
+\end{frame}
+
+
+
+
+\begin{frame}{\bf DDPG}
+
+  \centering{\includegraphics[scale=0.12]{../diagrams/basic/ddpgtraining.png}}
+
+\end{frame}
+
+
+\begin{frame}{\bf DDPG}
+
+  \centering{\includegraphics[scale=0.08]{../diagrams/basic/ddpgtraining.png}}
+
+  \begin{align*}
+    \mathcal{L(\theta)} &= \left( R + \gamma Q(s', A(s'; \phi^-); \theta^-) - Q(s, A(s; \phi); \theta)  \right)^2 \\
+    \mathcal{L(\phi)} &= -Q(s, A(s; \phi); \theta)
+  \end{align*}
+
+  where
+  \begin{itemize}
+    \item $Q$ is critic network with parameters $\theta$
+    \item $A$ is actor network with parameters $\phi$
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}{\bf model architecture}
+
+  \centering{\includegraphics[scale=0.12]{../diagrams/architectures/ddpgbasic.png}}
+  \centering{\includegraphics[scale=0.12]{../diagrams/architectures/ddpgexploration.png}}
+
+\end{frame}
+
+\begin{frame}{\bf ddpg actor code}
+
+  \centering{\includegraphics[scale=0.35]{../images/ddpg_actor.png}}
+  
+\end{frame}
+
+\begin{frame}{\bf ddpg critic code}
+
+  \centering{\includegraphics[scale=0.35]{../images/ddpg_critic.png}}
+  
+\end{frame}
+
+
+\begin{frame}{\bf ddpg code}
+
+  \centering{\includegraphics[scale=0.28]{../images/ddpg_code.png}}
+  
+\end{frame}
+
+
+\begin{frame}{\bf wise Wizard's DDPG spell chart}
+  \begin{itemize}
+    \item {\bf \color{red} neurons count} on 1st layer = 10x  state vector size
+    \item {\bf \color{red} neurons count} on 2nd layer = 0.5x neurons on 1st layer
+    \item {\bf \color{red} weight init} for hidden layers : use Xavier
+    \item {\bf \color{red} weight init} actor output  : use uniform $\langle -0.3, 0.3 \rangle$
+    \item {\bf \color{red} weight init} critic output : use uniform $\langle -0.003, 0.003 \rangle$
+    \item {\bf \color{red} gaussian noise} : linear decay variance, from 0.5 to 0.1, for 1M steps, or noisy layers
+    \item use {\bf \color{red} soft} target network update, $\tau = 0.001$
+    \item actor learning rate $\eta_a = 0.0001$
+    \item critic learning rate $\eta_c = 0.0002$
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{\bf wise Wizard's magic staff}
+
+  \begin{columns}
+
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item fully connected nets (robotic envs) {\bf \color{red} train on CPU} - AMD Ryzen
+        \item convolutional nets (visual inputs envs) {\bf \color{red} train on GPU}
+        \item use fast CPU - envs are slow
+        \item 32GB of RAM is enough
+        \item for small visual envs (Atari, DOOM, Nec) - GTX1060, GTX1080ti, RTX2080 ...
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.5\textwidth}
+      {\centering \includegraphics[scale=0.1]{../images/computer.jpg}}
+    \end{column}
+
+  \end{columns}
+
+
+\end{frame}
+
+
+\begin{frame}{\bf books to read}
+
+    \centering{\includegraphics[scale=0.1]{../images/books.jpg}}
+
+    \vspace*{-60ex} 
+    {
+        \begin{itemize}
+          \item Maxim Lapan, 2020, Deep Reinforcement Learning Hands-On second edition
+          \item Maxim Lapan, 2018, Deep Reinforcement Learning Hands-On
+          \item Praveen Palanisamy, 2018, Hands-On Intelligent Agents with OpenAI Gym
+          \item Andrea Lonza, 2019, Reinforcement Learning Algorithms with Python
+          \item Rajalingappaa Shanmugamani, 2019, Python Reinforcement Learning
+          \item Micheal Lanham, 2019, Hands-On Deep Learning for Games
+        \end{itemize}
+    }
+
+\end{frame}
+
+
+\begin{frame}{\bf Q\&A}
+
+\centering{\includegraphics[scale=0.1]{../images/me.jpg}}
+
+\url{michal.nand@gmail.com}
+
+\url{https://github.com/michalnand/imagination_reinforcement_learning}
+
+ 
+\end{frame}
+
+
+\end{document}
