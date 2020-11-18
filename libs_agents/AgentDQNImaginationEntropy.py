@@ -211,7 +211,7 @@ class AgentDQNImaginationEntropy():
 
         im_entropy, im_curiosity    = self.intrinsics_motivation(state_t, action_t, state_next_t, state_predicted_t)
         im_entropy                  = torch.tanh(self.entropy_beta*im_entropy)
-        im_curiosity                = torch.tanh(self.entropy_beta*im_curiosity)
+        im_curiosity                = torch.tanh(self.curiosity_beta*im_curiosity)
         intrinsics_motivation_t     = im_entropy + im_curiosity
 
         
