@@ -87,10 +87,7 @@ class AgentDDPGImaginationEntropy():
 
         action = action.squeeze()
 
-        state_new, self.reward, done, self.info = self.env.step(action)
-
-        state_predicted = self.model_env(state_t, action_t).squeeze().detach().numpy()
-       
+        state_new, self.reward, done, self.info = self.env.step(action)       
     
         if self.enabled_training:
             self.experience_replay.add(self.state, action, self.reward, done)
@@ -129,13 +126,11 @@ class AgentDDPGImaginationEntropy():
         self.optimizer_env.step()
 
 
-
-        im_entropy, im_curiosity = self.intrinsics_motivation(state_t, action_t, state_next_t, state_predicted_t)
-
-        intrinsics_motivation_t = torch.tanh(self.entropy_beta*im_entropy) + torch.tanh(self.curiosity_beta*im_curiosity)
-
-
-     
+        im_entropy, im_curiosity    = self.intrinsics_motivation(state_t, action_t, state_next_t, state_predicted_t)
+        im_entropy                  = torch.tanh(self.entropy_beta*im_entropy)
+        im_curiosity                = torch.tanh(self.entropy_beta*im_curiosity)
+        intrinsics_motivation_t     = im_entropy + im_curiosity
+           
 
         action_next_t       = self.model_actor_target.forward(state_next_t).detach()
         value_next_t        = self.model_critic_target.forward(state_next_t, action_next_t).detach()

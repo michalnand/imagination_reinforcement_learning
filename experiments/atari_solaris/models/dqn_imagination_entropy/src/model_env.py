@@ -29,7 +29,7 @@ class ResidualBlock(torch.nn.Module):
 
 class Model(torch.nn.Module):
 
-    def __init__(self, input_shape, outputs_count, kernels_count = 32):
+    def __init__(self, input_shape, outputs_count):
         super(Model, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,21 +43,21 @@ class Model(torch.nn.Module):
 
 
         self.layers_encoder = [
-            nn.Conv2d(input_channels + outputs_count, kernels_count, kernel_size=4, stride=4, padding=0),
+            nn.Conv2d(input_channels + outputs_count, 32, kernel_size=4, stride=4, padding=0),
             nn.ReLU(),
 
-            nn.Conv2d(kernels_count, kernels_count, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             
-            ResidualBlock(kernels_count),
-            ResidualBlock(kernels_count),
+            ResidualBlock(64),
+            ResidualBlock(64),
         ]
 
         self.layers_decoder = [
-            nn.Conv2d(kernels_count, kernels_count, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(64, 32, kernel_size=1, stride=1, padding=0),
             nn.ReLU(),
 
-            nn.ConvTranspose2d(kernels_count, input_channels, kernel_size=4, stride=4, padding=0, output_padding=0)   
+            nn.ConvTranspose2d(32, input_channels, kernel_size=4, stride=4, padding=0, output_padding=0)   
         ]
 
         for i in range(len(self.layers_encoder)):

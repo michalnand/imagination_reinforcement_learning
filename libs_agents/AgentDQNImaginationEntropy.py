@@ -86,9 +86,6 @@ class AgentDQNImaginationEntropy():
 
         state_t     = torch.from_numpy(self.state).to(self.model.device).unsqueeze(0).float()
         
-        q_values    = self.model(state_t)
-        q_values    = q_values.squeeze(0).detach().to("cpu").numpy()
- 
         action_idx_np, _ = self._sample_action(state_t, self.epsilon)
 
         self.action = action_idx_np[0]
@@ -213,7 +210,9 @@ class AgentDQNImaginationEntropy():
 
 
         im_entropy, im_curiosity    = self.intrinsics_motivation(state_t, action_t, state_next_t, state_predicted_t)
-        intrinsics_motivation_t     = torch.tanh(self.entropy_beta*im_entropy) + torch.tanh(self.curiosity_beta*im_curiosity)
+        im_entropy                  = torch.tanh(self.entropy_beta*im_entropy)
+        im_curiosity                = torch.tanh(self.entropy_beta*im_curiosity)
+        intrinsics_motivation_t     = im_entropy + im_curiosity
 
         
         #q values, state now, state next
@@ -340,23 +339,6 @@ class AgentDQNImaginationEntropy():
 
         return states_imagined_t
 
-    def _compute_entropy(self, states_t, states_initial_t, threshold):
-        batch_size  = states_t.shape[0]
-        result      = torch.zeros(batch_size).to(self.model_env.device)
-
-        for b in range(batch_size):
-            s_dif       = states_t[b] - states_initial_t[b]
-            
-            flatten     = s_dif.view(s_dif.size(0), -1)
-
-            variance    = torch.std(flatten, dim=0)
-            shrink      = variance[variance > threshold]
-             
-            if shrink.shape[0] > 0:
-                result[b]   = shrink.mean()
-
-        return result
-
 
     def _one_hot_encoding(self, action_t):
         batch_size          = action_t.shape[0]
@@ -368,21 +350,21 @@ class AgentDQNImaginationEntropy():
         return action_one_hot_t
 
     def get_log(self):
-        result = ""
-        result+= str(self.env_loss) + " "
-        result+= str(self.im_entropy) + " "
-        result+= str(self.im_curiosity) + " "
-        result+= str(self.im) + " "
+        result = "" 
+        result+= str(round(self.env_loss, 5)) + " "
+        result+= str(round(self.im_entropy, 5)) + " "
+        result+= str(round(self.im_curiosity, 5)) + " "
+        result+= str(round(self.im, 5)) + " "
 
         return result
 
-    def intrinsics_motivation(self, state_t, action_t, state_next_t, state_predicted_t, threshold = 0.01):
+    def intrinsics_motivation(self, state_t, action_t, state_next_t, state_predicted_t, threshold = 0.001):
         
         #compute imagined states, use state_t as initial state
         states_imagined_t   = self._process_imagination(state_t, self.epsilon)
         
         #compute entropy of imagined states
-        im_entropy           = self._compute_entropy(states_imagined_t.detach(), state_t, threshold)
+        im_entropy           = self._compute_entropy(states_imagined_t.detach(), threshold)
        
         #compute curiosity
         state_dif    = ((state_next_t - state_predicted_t)**2).detach()
@@ -396,5 +378,26 @@ class AgentDQNImaginationEntropy():
             if shrink.shape[0] > 0:
                 im_curiosity[b] = shrink.mean()
 
-        
         return im_entropy, im_curiosity
+
+    def _compute_entropy(self, states_t, threshold):
+        batch_size  = states_t.shape[0]
+        result      = torch.zeros(batch_size).to(self.model_env.device)
+
+        for b in range(batch_size):
+            result[b]   = self._state_entropy(states_t[b], threshold)
+
+        return result
+
+    def _state_entropy(self, state_t, threshold):
+        flatten     = state_t.view(state_t.size(0), -1)
+
+        variance    = torch.std(flatten, dim=0)
+        shrink      = variance[variance > threshold]
+             
+        if shrink.shape[0] > 0:
+            result  = shrink.mean()
+        else:
+            result  = 0.0
+
+        return result
