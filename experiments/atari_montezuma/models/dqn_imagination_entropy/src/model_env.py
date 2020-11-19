@@ -79,6 +79,8 @@ class Model(torch.nn.Module):
         print("\n\n")
         
     def forward(self, state, action):
+
+        
         action_ = action.unsqueeze(1).unsqueeze(1).transpose(3, 1).repeat((1, 1, self.input_shape[1], self.input_shape[2])).to(self.device)
 
         model_x         = torch.cat([state, action_], dim = 1)
