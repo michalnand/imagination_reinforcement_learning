@@ -10,7 +10,6 @@ from libs_common.atari_wrapper import *
 
 import models.dqn_imagination.src.model_features    as ModelFeatures
 import models.dqn_imagination.src.model_forward     as ModelForward
-import models.dqn_imagination.src.model_reward      as ModelReward
 import models.dqn_imagination.src.model_actor       as ModelActor
 import models.dqn_imagination.src.config            as Config
 
@@ -23,7 +22,7 @@ env = AtariWrapper(env)
 env.reset()
 
 
-agent = libs_agents.AgentDQNImaginationEntropy(env, ModelFeatures, ModelForward, ModelReward, ModelActor, Config)
+agent = libs_agents.AgentDQNImaginationEntropy(env, ModelFeatures, ModelActor, ModelForward, Config)
 
 max_iterations = 10*(10**6) 
 

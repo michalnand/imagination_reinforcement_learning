@@ -39,7 +39,7 @@ class Model(torch.nn.Module):
                
         self.layers = [ 
             nn.Conv2d(self.input_shape[0] + outputs_count, 128, kernel_size=1, stride=1, padding=0),
-            nn.ReLU(),
+            nn.ReLU(), 
 
             ResidualBlock(128),
             ResidualBlock(128),
@@ -70,13 +70,9 @@ class Model(torch.nn.Module):
         return self.model(x)
 
     def save(self, path):
-        print("saving ", path)
-
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")
 
     def load(self, path):
-        print("loading ", path) 
-
         self.model.load_state_dict(torch.load(path + "trained/model_forward.pt", map_location = self.device))
         self.model.eval() 
 

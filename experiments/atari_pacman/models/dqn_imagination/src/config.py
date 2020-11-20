@@ -12,8 +12,10 @@ class Config():
         self.exploration            = libs_common.decay.Const(0.05, 0.05)        
         self.experience_replay_size = 32768
  
-        self.learning_rate_features = 0.0002
-        self.learning_rate_forward  = 0.0002
-        self.learning_rate_reward   = 0.0002
+        self.learning_rate_features = 0.0001
+        self.learning_rate_forward  = 0.0001
         self.learning_rate_actor    = 0.0001
+
+        self.imagination_rollouts   = 16
+        self.entropy_beta           = 10.0
 
