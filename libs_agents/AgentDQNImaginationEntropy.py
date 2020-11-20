@@ -2,9 +2,6 @@ import numpy
 import torch
 from .ExperienceBuffer import *
 
-import cv2
-
-numpy.set_printoptions(threshold=numpy.inf)
 
 class AgentDQNImaginationEntropy():
     def __init__(self, env, ModelFeatures, ModelActor, ModelForward, Config):
@@ -142,7 +139,6 @@ class AgentDQNImaginationEntropy():
         entropy_t           = torch.tanh(self.entropy_beta*entropy_t)
         entropy_t           = entropy_t.detach()
 
-
         '''
         3, predict Q-values using features, and actor model
         '''
@@ -216,9 +212,8 @@ class AgentDQNImaginationEntropy():
 
         batch_size = features_t.shape[0]
 
-        q_values_t = torch.zeros((batch_size, self.actions_count))
-        for b in range(batch_size):
-            q_values_t[b]          = self.model_actor(features_t[b].unsqueeze(0)).to("cpu")[0]
+        
+        q_values_t          = self.model_actor(features_t).to("cpu")
 
         #best actions indices
         q_max_indices_t     = torch.argmax(q_values_t, dim = 1)
@@ -259,28 +254,19 @@ class AgentDQNImaginationEntropy():
 
        
         '''
-        reshape, to create one huge batch - much more faster
-        shape = (imagination_rollouts*batch_size, features_shape)
+        features_initial = (imagination_rollouts, batch_size, features_shape)
         '''
-        features_initial = torch.zeros((rollouts, batch_size, ) + features_shape ).to(features_initial_t.device)
+        features_initial = torch.zeros((rollouts, batch_size, ) + features_shape).to(features_initial_t.device)
         for r in range(rollouts):
             features_initial[r] = features_initial_t.clone()
 
-
-        features_initial    = features_initial.reshape((rollouts*batch_size, ) + features_shape )
+        features_imagined_t = torch.zeros((rollouts, batch_size, ) + features_shape).to(features_initial_t.device)
 
         for s in range(steps):
-            _, action_one_hot   = self._sample_action(features_initial, epsilon)
-            features_imagined_t = self.model_forward(features_initial, action_one_hot)
-            features_initial    = features_imagined_t.clone()
-
-        '''
-        reshape back
-        shape = (imagination_rollouts, batch_size, features_shape)
-        '''
-        features_imagined_t = features_imagined_t.reshape((self.imagination_rollouts, batch_size, ) + features_shape)
-      
-
+            for r in range(rollouts):
+                _, action_one_hot       = self._sample_action(features_initial[r], epsilon)
+                features_imagined_t[r]  = self.model_forward(features_initial[r], action_one_hot).detach()
+                features_initial[r]     = features_imagined_t[r].clone()
 
         '''
         swap axis to have batch first
