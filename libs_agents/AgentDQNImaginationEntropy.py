@@ -133,8 +133,9 @@ class AgentDQNImaginationEntropy():
 
         '''
         3, imagine states, and compute their entropy
-        '''
+        '''        
         features_imagined_t = self._imagine_states(features_t.detach(), self.imagination_rollouts, self.epsilon)
+
         entropy_t           = self._compute_entropy(features_imagined_t)
         entropy_t           = torch.tanh(self.entropy_beta*entropy_t)
         entropy_t           = entropy_t.detach()
@@ -207,7 +208,7 @@ class AgentDQNImaginationEntropy():
         self.loss_actor     = (1.0 - k)*self.loss_actor     + k*loss_actor.detach().to("cpu").numpy()
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
 
-        print(self.loss_forward, self.loss_actor, self.entropy, "\n\n")
+        #print(self.loss_forward, self.loss_actor, self.entropy, "\n\n")
 
     def _sample_action(self, state_t, epsilon):
 

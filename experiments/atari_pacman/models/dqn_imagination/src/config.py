@@ -17,5 +17,5 @@ class Config():
         self.learning_rate_actor    = 0.0001
 
         self.imagination_rollouts   = 16
-        self.entropy_beta           = 10.0
+        self.entropy_beta           = 100.0
 
