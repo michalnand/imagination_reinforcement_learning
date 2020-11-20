@@ -225,8 +225,8 @@ class AgentDQNImaginationEntropy():
         select_random_mask_t= torch.tensor((torch.rand(batch_size) < epsilon).clone(), dtype = int)
 
         #apply mask
-        #action_idx_t    = select_random_mask_t*q_random_indices_t + (1 - select_random_mask_t)*q_max_indices_t
-        #action_idx_t    = torch.tensor(action_idx_t, dtype=int)
+        action_idx_t    = select_random_mask_t*q_random_indices_t + (1 - select_random_mask_t)*q_max_indices_t
+        action_idx_t    = torch.tensor(action_idx_t, dtype=int)
 
         action_idx_t    = torch.tensor(q_max_indices_t, dtype=int)
 
