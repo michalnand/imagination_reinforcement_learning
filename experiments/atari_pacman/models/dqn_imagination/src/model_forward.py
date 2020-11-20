@@ -38,15 +38,13 @@ class Model(torch.nn.Module):
         self.input_shape    = input_shape
                
         self.layers = [ 
-            nn.Conv2d(self.input_shape[0] + outputs_count, 128, kernel_size=1, stride=1, padding=0),
-            nn.ReLU(), 
+            nn.Conv2d(self.input_shape[0] + outputs_count, 128, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
 
             ResidualBlock(128),
             ResidualBlock(128),
-            ResidualBlock(128),
-            ResidualBlock(128),
-            
-            nn.Conv2d(128, self.input_shape[0], kernel_size=1, stride=1, padding=0)
+ 
+            nn.Conv2d(128, self.input_shape[0], kernel_size=3, stride=1, padding=1)
         ] 
 
       

@@ -4,6 +4,7 @@ from .ExperienceBuffer import *
 
 import cv2
 
+numpy.set_printoptions(threshold=numpy.inf)
 
 class AgentDQNImaginationEntropy():
     def __init__(self, env, ModelFeatures, ModelActor, ModelForward, Config):
@@ -20,6 +21,7 @@ class AgentDQNImaginationEntropy():
 
         self.entropy_beta           = config.entropy_beta
         self.imagination_rollouts   = config.imagination_rollouts
+        self.imagination_steps      = config.imagination_steps
         
 
         self.state_shape        = self.env.observation_space.shape
@@ -75,7 +77,7 @@ class AgentDQNImaginationEntropy():
 
         features    = self.model_features(state_t)
         
-        action_idx_np, _,  = self._sample_action(features, self.epsilon)
+        action_idx_np, action_one_hot,  = self._sample_action(features, self.epsilon)
 
         action = action_idx_np[0]
 
@@ -101,7 +103,7 @@ class AgentDQNImaginationEntropy():
             self._show_activity(self.state)
 
         self.iterations+= 1
-
+  
         return reward, done
     
     def _show_activity(self, state, alpha = 0.6):
@@ -134,7 +136,7 @@ class AgentDQNImaginationEntropy():
         '''
         3, imagine states, and compute their entropy
         '''        
-        features_imagined_t = self._imagine_states(features_t.detach(), self.imagination_rollouts, self.epsilon)
+        features_imagined_t = self._imagine_states(features_t.detach(), self.imagination_rollouts, self.imagination_steps, self.epsilon)
 
         entropy_t           = self._compute_entropy(features_imagined_t)
         entropy_t           = torch.tanh(self.entropy_beta*entropy_t)
@@ -210,11 +212,13 @@ class AgentDQNImaginationEntropy():
 
         #print(self.loss_forward, self.loss_actor, self.entropy, "\n\n")
 
-    def _sample_action(self, state_t, epsilon):
+    def _sample_action(self, features_t, epsilon):
 
-        batch_size = state_t.shape[0]
+        batch_size = features_t.shape[0]
 
-        q_values_t          = self.model_actor(state_t).to("cpu")
+        q_values_t = torch.zeros((batch_size, self.actions_count))
+        for b in range(batch_size):
+            q_values_t[b]          = self.model_actor(features_t[b].unsqueeze(0)).to("cpu")[0]
 
         #best actions indices
         q_max_indices_t     = torch.argmax(q_values_t, dim = 1)
@@ -226,8 +230,10 @@ class AgentDQNImaginationEntropy():
         select_random_mask_t= torch.tensor((torch.rand(batch_size) < epsilon).clone(), dtype = int)
 
         #apply mask
-        action_idx_t    = select_random_mask_t*q_random_indices_t + (1 - select_random_mask_t)*q_max_indices_t
-        action_idx_t    = torch.tensor(action_idx_t, dtype=int)
+        #action_idx_t    = select_random_mask_t*q_random_indices_t + (1 - select_random_mask_t)*q_max_indices_t
+        #action_idx_t    = torch.tensor(action_idx_t, dtype=int)
+
+        action_idx_t    = torch.tensor(q_max_indices_t, dtype=int)
 
         #create one hot encoding
         action_one_hot_t = self._action_one_hot(action_idx_t)
@@ -246,11 +252,12 @@ class AgentDQNImaginationEntropy():
 
         return action_one_hot_t
 
-    def _imagine_states(self, features_initial_t, rollouts, epsilon):
+    def _imagine_states(self, features_initial_t, rollouts, steps, epsilon):
         batch_size = features_initial_t.shape[0]
 
         features_shape = features_initial_t.shape[1:]
 
+       
         '''
         reshape, to create one huge batch - much more faster
         shape = (imagination_rollouts*batch_size, features_shape)
@@ -261,8 +268,11 @@ class AgentDQNImaginationEntropy():
 
 
         features_initial    = features_initial.reshape((rollouts*batch_size, ) + features_shape )
-        _, action_one_hot   = self._sample_action(features_initial, epsilon)
-        features_imagined_t = self.model_forward(features_initial, action_one_hot)
+
+        for s in range(steps):
+            _, action_one_hot   = self._sample_action(features_initial, epsilon)
+            features_imagined_t = self.model_forward(features_initial, action_one_hot)
+            features_initial    = features_imagined_t.clone()
 
         '''
         reshape back
