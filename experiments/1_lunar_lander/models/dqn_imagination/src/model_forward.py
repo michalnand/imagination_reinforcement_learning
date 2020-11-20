@@ -10,9 +10,9 @@ class Model(torch.nn.Module):
         self.layers = [ 
             nn.Linear(input_shape[0] + outputs_count, hidden_count),
             nn.ReLU(),           
-            libs_layers.NoisyLinear(hidden_count, hidden_count//2),
+            nn.Linear(hidden_count, hidden_count//2),
             nn.ReLU(),    
-            libs_layers.NoisyLinear(hidden_count//2, input_shape)
+            nn.Linear(hidden_count//2, input_shape[0])
         ]
 
         for i in range(len(self.layers)):

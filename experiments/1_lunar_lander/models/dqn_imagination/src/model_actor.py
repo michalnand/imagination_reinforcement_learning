@@ -16,13 +16,12 @@ class Model(torch.nn.Module):
             nn.ReLU(),           
             libs_layers.NoisyLinear(hidden_count, hidden_count//2),
             nn.ReLU(),    
-            libs_layers.NoisyLinear(hidden_count//2, outputs_count),
-            nn.Tanh()
+            libs_layers.NoisyLinear(hidden_count//2, outputs_count)
         ]
 
-        torch.nn.init.xavier_uniform_(self.layers[0].weight)
-        torch.nn.init.xavier_uniform_(self.layers[2].weight)
-        torch.nn.init.uniform_(self.layers[4].weight, -0.3, 0.3)
+        for i in range(len(self.layers)):
+            if hasattr(self.layers[i], "weight"):
+                torch.nn.init.xavier_uniform_(self.layers[i].weight)
 
         self.model = nn.Sequential(*self.layers)
         self.model.to(self.device)

@@ -3,7 +3,6 @@ from .AgentRandomContinuous import *
 
 from .AgentDQN import *
 from .AgentDQNImaginationEntropy import *
-from .AgentDQNEntropy import *
 from .AgentDQNDuel import *
 
 from .AgentDDPG import *

@@ -5,7 +5,7 @@ import torch
 
 class ExperienceBuffer():
 
-    def __init__(self, size, n_steps = 1):
+    def __init__(self, size):
         self.size   = size
        
         self.ptr      = 0 
@@ -14,11 +14,7 @@ class ExperienceBuffer():
         self.reward_b = []
         self.done_b   = []
 
-        self.n_steps        = n_steps
-
-        
-
-
+    
     def length(self):
         return len(self.state_b)
 
@@ -63,8 +59,8 @@ class ExperienceBuffer():
         
         state_shape     = (batch_size, ) + self.state_b[0].shape[0:]
         action_shape    = (batch_size, )
-        reward_shape    = (batch_size, self.n_steps)
-        done_shape      = (batch_size, self.n_steps)
+        reward_shape    = (batch_size, )
+        done_shape      = (batch_size, )
       
 
         state_t         = torch.zeros(state_shape,  dtype=torch.float32).to(device)
@@ -80,11 +76,10 @@ class ExperienceBuffer():
 
             state_t[j]         = torch.from_numpy(self.state_b[n]).to(device)
             action_t[j]        = self.action_b[n]
-            state_next_t[j]    = torch.from_numpy(self.state_b[n + self.n_steps]).to(device)
+            state_next_t[j]    = torch.from_numpy(self.state_b[n + 1]).to(device)
             
-            for i in range(self.n_steps): 
-                reward_t[j][i] = self.reward_b[n+i]
-                done_t[j][i]   = self.done_b[n+i]
+            reward_t[j]        = self.reward_b[n]
+            done_t[j]          = self.done_b[n]
 
         reward_t    = reward_t.to(device)
         done_t      = done_t.to(device) 
@@ -94,6 +89,6 @@ class ExperienceBuffer():
     def find_indices_random(self, count):
         indices = numpy.zeros(count, dtype=int)
         for i in range(count):
-            indices[i]  = numpy.random.randint(self.length() - 1 - self.n_steps)
+            indices[i]  = numpy.random.randint(self.length() - 1)
         
         return indices

@@ -9,7 +9,7 @@ import libs_layers
 
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, hidden_count = 64):
+    def __init__(self, input_shape, outputs_count, hidden_count = 256):
         super(Model, self).__init__()
 
         self.device = "cpu"
@@ -17,9 +17,9 @@ class Model(torch.nn.Module):
         self.layers = [ 
             nn.Linear(input_shape[0], hidden_count),
             nn.ReLU(),           
-            libs_layers.NoisyLinear(hidden_count, hidden_count),
+            libs_layers.NoisyLinear(hidden_count, hidden_count//2),
             nn.ReLU(),    
-            libs_layers.NoisyLinear(hidden_count, outputs_count)
+            libs_layers.NoisyLinear(hidden_count//2, outputs_count)
         ]
 
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
@@ -37,10 +37,10 @@ class Model(torch.nn.Module):
      
     def save(self, path):
         print("saving to ", path)
-        torch.save(self.model.state_dict(), path + "trained/model_actor.pt")
+        torch.save(self.model.state_dict(), path + "trained/model.pt")
 
     def load(self, path):       
         print("loading from ", path)
-        self.model.load_state_dict(torch.load(path + "trained/model_actor.pt", map_location = self.device))
+        self.model.load_state_dict(torch.load(path + "trained/model.pt", map_location = self.device))
         self.model.eval()  
     

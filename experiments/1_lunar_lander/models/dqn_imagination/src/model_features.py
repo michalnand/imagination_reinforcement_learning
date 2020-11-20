@@ -2,10 +2,12 @@ import torch
 import torch.nn as nn
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, hidden_count = 256):
+    def __init__(self, input_shape, hidden_count = 16):
         super(Model, self).__init__()
 
         self.device = "cpu"
+
+        self.features_shape = (hidden_count//2, )
 
         self.layers_encoder = [ 
             nn.Linear(input_shape[0], hidden_count),
@@ -17,12 +19,9 @@ class Model(torch.nn.Module):
         self.layers_decoder = [ 
             nn.Linear(hidden_count//2, hidden_count),
             nn.ReLU(),
-            nn.Linear(hidden_count, hidden_count),
-            nn.ReLU(),  
-            nn.Linear(hidden_count, outputs_count)
+            nn.Linear(hidden_count, input_shape[0])
         ]
  
-      
         for i in range(len(self.layers_encoder)):
             if hasattr(self.layers_encoder[i], "weight"):
                 torch.nn.init.xavier_uniform_(self.layers_encoder[i].weight)

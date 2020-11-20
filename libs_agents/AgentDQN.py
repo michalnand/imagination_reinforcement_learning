@@ -8,32 +8,20 @@ import cv2
 class AgentDQN():
     def __init__(self, env, Model, Config):
         self.env = env
-
+ 
         config = Config.Config()
 
         self.batch_size         = config.batch_size
         self.exploration        = config.exploration
         self.gamma              = config.gamma
-        
-        if hasattr(config, "tau"):
-            self.soft_update        = True
-            self.tau                = config.tau
-        elif hasattr(config, "target_update"):
-            self.soft_update        = False
-            self.target_update      = config.target_update
-        else:
-            self.soft_update        = False
-            self.target_update      = 10000
 
-
+        self.target_update      = config.target_update
         self.update_frequency   = config.update_frequency        
-        self.bellman_steps = config.bellman_steps
-        
-       
+               
         self.state_shape    = self.env.observation_space.shape
         self.actions_count  = self.env.action_space.n
 
-        self.experience_replay = ExperienceBuffer(config.experience_replay_size, self.bellman_steps)
+        self.experience_replay = ExperienceBuffer(config.experience_replay_size)
 
         self.model          = Model.Model(self.state_shape, self.actions_count)
         self.model_target   = Model.Model(self.state_shape, self.actions_count)
@@ -77,15 +65,9 @@ class AgentDQN():
         if self.enabled_training and (self.iterations > self.experience_replay.size):
             if self.iterations%self.update_frequency == 0:
                 self.train_model()
-            
-            if self.soft_update:
-                for target_param, param in zip(self.model_target.parameters(), self.model.parameters()):
-                    target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
-            else:
-                if self.iterations%self.target_update == 0:
-                    self.model_target.load_state_dict(self.model.state_dict())
 
-
+            if self.iterations%self.target_update == 0:
+                self.model_target.load_state_dict(self.model.state_dict())
 
         if done:
             self.state = self.env.reset()
@@ -121,17 +103,9 @@ class AgentDQN():
 
         #compute target, n-step Q-learning
         q_target         = q_predicted.clone()
-        for j in range(self.batch_size):
-            gamma_        = self.gamma
-
-            reward_sum = 0.0
-            for i in range(self.bellman_steps):
-                if done_t[j][i]:
-                    gamma_ = 0.0
-                reward_sum+= reward_t[j][i]*(gamma_**i)
-            
-            action_idx    = action_t[j]
-            q_target[j][action_idx]   = reward_sum + (gamma_**self.bellman_steps)*torch.max(q_predicted_next[j])
+        for j in range(self.batch_size): 
+            action_idx              = action_t[j]
+            q_target[j][action_idx] = reward_t[j] + self.gamma*torch.max(q_predicted_next[j])*(1- done_t[j])
  
         #train DQN model
         loss  = ((q_target.detach() - q_predicted)**2)

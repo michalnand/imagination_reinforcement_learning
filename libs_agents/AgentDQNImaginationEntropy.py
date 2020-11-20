@@ -3,72 +3,50 @@ import torch
 from .ExperienceBuffer import *
 
 import cv2
-import time
 
 
 class AgentDQNImaginationEntropy():
-    def __init__(self, env, Model, ModelEnv, Config):
-        self.env = env
-
-        config = Config.Config()
-
+    def __init__(self, env, ModelFeatures, ModelForward, ModelReward, ModelActor, Config):
+        self.env    = env
+        config      = Config.Config()
 
         self.batch_size         = config.batch_size
         self.exploration        = config.exploration
         self.gamma              = config.gamma
         
-        if hasattr(config, "tau"):
-            self.soft_update        = True
-            self.tau                = config.tau
-        elif hasattr(config, "target_update"):
-            self.soft_update        = False
-            self.target_update      = config.target_update
-        else:
-            self.soft_update        = False
-            self.target_update      = 10000
-
-
-        self.update_frequency       = config.update_frequency        
-        self.bellman_steps          = config.bellman_steps
+        self.target_update      = config.target_update
+        self.update_frequency   = config.update_frequency        
         
-       
-                 
-        self.imagination_rollouts   = config.imagination_rollouts
-        self.imagination_steps      = config.imagination_steps
 
-        self.entropy_beta           = config.entropy_beta
-        self.curiosity_beta         = config.curiosity_beta
+        self.state_shape        = self.env.observation_space.shape
+        self.actions_count      = self.env.action_space.n
 
-        self.exploration            = config.exploration
+        self.experience_replay  = ExperienceBuffer(config.experience_replay_size)
 
+        self.model_features     = ModelFeatures.Model(self.state_shape)
+        features_shape          = self.model_features.features_shape
+        self.model_forward      = ModelForward.Model(features_shape,    self.actions_count)
+        self.model_reward       = ModelReward.Model(features_shape,     self.actions_count)
+        self.model_actor        = ModelActor.Model(features_shape,      self.actions_count)
+        self.model_actor_target = ModelActor.Model(features_shape,      self.actions_count)
 
-
-        self.state_shape    = self.env.observation_space.shape
-        self.actions_count  = self.env.action_space.n
-
-
-        self.experience_replay = ExperienceBuffer(config.experience_replay_size, self.bellman_steps)
-
-        self.model          = Model.Model(self.state_shape, self.actions_count)
-        self.model_target   = Model.Model(self.state_shape, self.actions_count)
-        self.optimizer      = torch.optim.Adam(self.model.parameters(), lr= config.learning_rate)
-
-        for target_param, param in zip(self.model_target.parameters(), self.model.parameters()):
+        self.optimizer_features = torch.optim.Adam(self.model_features.parameters(), lr=config.learning_rate_features)
+        self.optimizer_forward  = torch.optim.Adam(self.model_forward.parameters(), lr=config.learning_rate_forward)
+        self.optimizer_reward   = torch.optim.Adam(self.model_reward.parameters(), lr=config.learning_rate_reward)
+        self.optimizer_actor    = torch.optim.Adam(self.model_actor.parameters(), lr=config.learning_rate_actor)
+        
+        for target_param, param in zip(self.model_actor_target.parameters(), self.model_actor.parameters()):
             target_param.data.copy_(param.data)
 
-
-        self.model_env          = ModelEnv.Model(self.state_shape, self.actions_count)
-        self.optimizer_env      = torch.optim.Adam(self.model_env.parameters(), lr= config.env_learning_rate)
-
-    
-        self.state    = env.reset()
+        self.state          = env.reset()
         self.iterations     = 0
         self.enable_training()
 
-        self.env_loss       = 0.0
-        self.im_entropy     = 0.0
-        self.im_curiosity   = 0.0
-        self.im             = 0.0
+        self.loss_features  = 0.0
+        self.loss_forward   = 0.0
+        self.loss_reward    = 0.0
+        self.loss_actor     = 0.0
+        
 
 
     def enable_training(self):
@@ -80,33 +58,29 @@ class AgentDQNImaginationEntropy():
     def main(self, show_activity = False):
         if self.enabled_training:
             self.exploration.process()
-            self.epsilon = self.exploration.get()
+            epsilon = self.exploration.get()
         else:
-            self.epsilon = self.exploration.get_testing()
+            epsilon = self.exploration.get_testing()
+             
+        state_t     = torch.from_numpy(self.state).to(self.model_actor.device).unsqueeze(0).float()
 
-        state_t     = torch.from_numpy(self.state).to(self.model.device).unsqueeze(0).float()
+        features, _ = self.model_features(state_t)
         
-        action_idx_np, _ = self._sample_action(state_t, self.epsilon)
+        action_idx_np, _,  = self._sample_action(features, epsilon)
 
-        self.action = action_idx_np[0]
+        action = action_idx_np[0]
 
-        state_new, self.reward, done, self.info = self.env.step(self.action)
+        state_new, reward, done, self.info = self.env.step(action)
  
         if self.enabled_training:
-            self.experience_replay.add(self.state, self.action, self.reward, done)
-
+            self.experience_replay.add(self.state, action, reward, done)
 
         if self.enabled_training and (self.iterations > self.experience_replay.size):
             if self.iterations%self.update_frequency == 0:
-                self.train_model()
-            
-            if self.soft_update:
-                for target_param, param in zip(self.model_target.parameters(), self.model.parameters()):
-                    target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
-            else:
-                if self.iterations%self.target_update == 0:
-                    self.model_target.load_state_dict(self.model.state_dict())
-
+                self._training()
+ 
+            if self.iterations%self.target_update == 0:
+                self.model_actor_target.load_state_dict(self.model_actor.state_dict())
 
         if done:
             self.state = self.env.reset()
@@ -114,12 +88,11 @@ class AgentDQNImaginationEntropy():
             self.state = state_new.copy()
 
         if show_activity:
-            self._show_entropy_activity(state_t)
+            self._show_activity(self.state)
 
-        
         self.iterations+= 1
 
-        return self.reward, done
+        return reward, done
     
     def _show_activity(self, state, alpha = 0.6):
         activity_map    = self.model.get_activity_map(state)
@@ -133,271 +106,171 @@ class AgentDQNImaginationEntropy():
         image = cv2.resize(image, (400, 400), interpolation = cv2.INTER_AREA)
         cv2.imshow('state activity', image)
         cv2.waitKey(1)
-
-    def _tensor_to_numpy(self, x, spacing = 4):
-        x_np    = x.detach().to("cpu").numpy()
-        height  = x_np.shape[2]
-        width   = x_np.shape[3]
-
-        rows    = 4
-        cols    = 4
         
-        result  = numpy.zeros((rows*(height+spacing), cols*(width+spacing)))
-        for row in range(rows):
-            for col in range(cols):
-                idx = col + row*cols
-                result[row*width + row*spacing:(row+1)*width + row*spacing, col*height + col*spacing:(col+1)*height + col*spacing] = x_np[idx][0]
+    def _training(self):
+        '''
+        1, sample random minibatch
+        '''
+        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_actor.device)
+        action_one_hot_t   = self._action_one_hot(action_t)
 
-        k = 1.0/(result.max() - result.min())
-        q = 1.0 - k*result.max()   
-        result = k*result + q
+        '''
+        2, predict features for next state
+        '''
+        features_t, state_predicted_t = self.model_features(state_t)
 
-        return result
+        '''
+        3, train features model, MSE loss
+        '''
+        loss_features  = ((state_t - state_predicted_t)**2)
+        loss_features  = loss_features.mean() 
 
+        self.optimizer_features.zero_grad()
+        loss_features.backward()
+        self.optimizer_features.step()
 
-    def _show_entropy_activity(self, state_t, size = 256):
-        if self.iterations%50 != 0:
-            return 
-
-        state_np  = state_t[0][0].detach().to("cpu").numpy()
-        state_np  = cv2.resize(state_np, (size, size), interpolation = cv2.INTER_AREA)
-
-        states_imagined_t   = self._process_imagination(state_t, self.epsilon).squeeze(0)
-
-        states_dif_t        = state_t.squeeze(0) - states_imagined_t
- 
-        entropy_t           = torch.std(states_dif_t, dim=0).mean(dim=0)
-
-        flatten     = torch.abs(states_dif_t.view(states_dif_t.size(0), -1))
+        '''
+        4, compute features for next state
+        '''
+        features_next_t, _ = self.model_features(state_next_t)
         
+        '''
+        5, predict features for next state from current features and action
+        train forward model, MSE loss
+        note : loss_forward is also curiosity in features space
+        '''
+        features_next_predicted_t = self.model_forward(features_t.detach(), action_one_hot_t.detach())
 
-        states_imagined_np  = self._tensor_to_numpy(states_imagined_t)
-        states_imagined_np  = cv2.resize(states_imagined_np, (size, size), interpolation = cv2.INTER_AREA)
+        loss_forward  = ((features_next_t.detach() - features_next_predicted_t)**2)
+        loss_forward  = loss_forward.mean() 
 
-        #states_dif_np       = self._tensor_to_numpy(states_dif_t**2)
-        #states_dif_np       = cv2.resize(states_dif_np, (size, size), interpolation = cv2.INTER_AREA)
+        self.optimizer_forward.zero_grad()
+        loss_forward.backward()
+        self.optimizer_forward.step()
+
+        '''
+        6, train reward model, MSE loss
+        '''
+        reward_predicted_t = self.model_reward(features_t.detach(), action_one_hot_t.detach())
         
-        entropy_np          = entropy_t.detach().to("cpu").numpy()
-        k = 1.0/(entropy_np.max() - entropy_np.min())
-        q = 1.0 - k*entropy_np.max()   
-        entropy_np = k*entropy_np + q
+        loss_reward  = ((reward_t - reward_predicted_t)**2)
+        loss_reward  = loss_reward.mean() 
 
-        entropy_np = cv2.resize(entropy_np, (size, size), interpolation = cv2.INTER_AREA)
+        self.optimizer_reward.zero_grad()
+        loss_reward.backward()
+        self.optimizer_reward.step()
 
+        '''
+        7, Q-learning for actor, MSE loss with gradient clipping
+        features_t and features_next_t are used as state
+        '''
 
-        image   =  numpy.hstack((state_np, states_imagined_np, entropy_np))
-
-        cv2.imshow('states_imagined_np', image)
-        cv2.waitKey(1)
-       
-        
-    def train_model(self):
-        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model.device)
-        
-        #environment model state prediction
-        action_one_hot_t    = self._one_hot_encoding(action_t)
-        state_predicted_t   = self.model_env(state_t, action_one_hot_t)
-
-        #env model loss
-        env_loss = (state_next_t - state_predicted_t)**2
-        env_loss = env_loss.mean()
-
-        #update env model
-        self.optimizer_env.zero_grad()
-        env_loss.backward() 
-        self.optimizer_env.step()
-
-
-
-        im_entropy, im_curiosity    = self.intrinsics_motivation(state_t, action_t, state_next_t, state_predicted_t)
-        im_entropy                  = torch.tanh(self.entropy_beta*im_entropy)
-        im_curiosity                = torch.tanh(self.curiosity_beta*im_curiosity)
-        intrinsics_motivation_t     = im_entropy + im_curiosity
-
-        
         #q values, state now, state next
-        q_predicted      = self.model.forward(state_t)
-        q_predicted_next = self.model_target.forward(state_next_t)
+        q_predicted      = self.model_actor.forward(features_t.detach())
+        q_predicted_next = self.model_actor_target.forward(features_next_t.detach())
 
-        #compute target, n-step Q-learning
+        #compute target, Q-learning
         q_target         = q_predicted.clone()
-        for j in range(self.batch_size):
-            gamma_        = self.gamma
-
-            reward_sum = 0.0
-            for i in range(self.bellman_steps):
-                if done_t[j][i]:
-                    gamma_ = 0.0
-                reward_sum+= reward_t[j][i]*(gamma_**i)
-
-            action_idx    = action_t[j]
-            q_target[j][action_idx]   = reward_sum + (gamma_**self.bellman_steps)*torch.max(q_predicted_next[j]) + intrinsics_motivation_t[j]
+        for j in range(self.batch_size): 
+            action_idx              = action_t[j]
+            q_target[j][action_idx] = reward_t[j] + self.gamma*torch.max(q_predicted_next[j])*(1- done_t[j])
  
         #train DQN model
-        loss = ((q_target.detach() - q_predicted)**2)
-        loss  = loss.mean() 
+        loss_actor  = ((q_target.detach() - q_predicted)**2)
+        loss_actor  = loss_actor.mean() 
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        for param in self.model.parameters():
+        self.optimizer_actor.zero_grad()
+        loss_actor.backward()
+        for param in self.model_actor.parameters():
             param.grad.data.clamp_(-10.0, 10.0)
-        self.optimizer.step()
-
+        self.optimizer_actor.step()
 
         k = 0.02
-        self.env_loss       = (1.0 - k)*self.env_loss       + k*env_loss.mean().detach().to("cpu").numpy()
-        self.im_entropy     = (1.0 - k)*self.im_entropy     + k*im_entropy.mean().detach().to("cpu").numpy()
-        self.im_curiosity   = (1.0 - k)*self.im_curiosity   + k*im_curiosity.mean().detach().to("cpu").numpy()
-        self.im             = (1.0 - k)*self.im             + k*intrinsics_motivation_t.mean().detach().to("cpu").numpy()
 
+        self.loss_features  = (1.0 - k)*self.loss_features + k*loss_features.detach().to("cpu").numpy()
+        self.loss_forward   = (1.0 - k)*self.loss_forward + k*loss_forward.detach().to("cpu").numpy()
+        self.loss_reward    = (1.0 - k)*self.loss_reward + k*loss_reward.detach().to("cpu").numpy()
+        self.loss_actor     = (1.0 - k)*self.loss_actor + k*loss_actor.detach().to("cpu").numpy()
 
-    
-    def save(self, save_path):
-        self.model.save(save_path)
-        self.model_env.save(save_path)
-
-    def load(self, load_path):
-        self.model.load(load_path)
-        self.model_env.load(load_path)
-    
-
+       
     def _sample_action(self, state_t, epsilon):
 
         batch_size = state_t.shape[0]
 
-        q_values_t  = self.model(state_t)
+        q_values_t          = self.model_actor(state_t).to("cpu")
 
-        action_idx_t     = torch.zeros(batch_size).to(self.model.device)
+        #best actions indices
+        q_max_indices_t     = torch.argmax(q_values_t, dim = 1)
 
-        action_one_hot_t = torch.zeros((batch_size, self.actions_count)).to(self.model.device)
+        #random actions indices
+        q_random_indices_t  = torch.randint(self.actions_count, (batch_size,))
 
-        #e-greedy strategy
-        for b in range(batch_size):
-            action = torch.argmax(q_values_t[b])
-            if numpy.random.random() < epsilon:
-                action = numpy.random.randint(self.actions_count)
+        #create mask, which actions will be from q_random_indices_t and which from q_max_indices_t
+        select_random_mask_t= torch.tensor((torch.rand(batch_size) < epsilon).clone(), dtype = int)
 
-            action_idx_t[b]                 = action
-            action_one_hot_t[b][action]     = 1.0
-        
+        #apply mask
+        action_idx_t    = select_random_mask_t*q_random_indices_t + (1 - select_random_mask_t)*q_max_indices_t
+        action_idx_t    = torch.tensor(action_idx_t, dtype=int)
+
+        #create one hot encoding
+        action_one_hot_t = self._action_one_hot(action_idx_t)
+
+        #numpy result
         action_idx_np       = action_idx_t.detach().to("cpu").numpy().astype(dtype=int)
 
         return action_idx_np, action_one_hot_t
 
+    def _action_one_hot(self, action_idx_t):
+        batch_size = action_idx_t.shape[0]
 
-    '''
-    compute imagined states
-
-    states_t : initial (root states) in shape = (batch_size, ) + state_shape
-    epsilon  : epsilon greedy factor, 1 = total random, 0 = total deterministic
-
-    returns imagined states in shape
-    shape = (batch_size, imagination_rollouts, ) + state_shape
-
-
-    f.e. result[5] is imagined states from root state starting as states_t[5]
-    result[5][0] correspond to rollout 0 - imagined with action 0
-    result[5][1] correspond to rollout 1 - imagined with action 1
-    result[5][2] correspond to rollout 1 - imagined with action 2
-    '''
-    def _process_imagination(self, states_t, epsilon):
-        self.model.eval()
-        self.model_env.eval()
-
-        batch_size  = states_t.shape[0]
-
-        states_imagined_t      = torch.zeros((self.imagination_rollouts, batch_size, ) + self.state_shape ).to(self.model_env.device)
-
-        for r in range(self.imagination_rollouts):
-            states_imagined_t[r] = states_t.clone()
- 
-        '''
-        reshape, to create one huge batch - much more faster
-        shape = (imagination_rollouts*batch_size, state_shape)
-        '''
-        states_imagined_t = states_imagined_t.reshape((self.imagination_rollouts*batch_size, ) + self.state_shape)
-
-        for s in range(self.imagination_steps):
-            _, action_t             = self._sample_action(states_imagined_t, epsilon)
-            states_imagined_next_t  = self.model_env(states_imagined_t, action_t)
-            states_imagined_t       = states_imagined_next_t.clone()
-
-        '''
-        reshape back
-        shape = (imagination_rollouts, batch_size, state_shape)
-        '''
-        states_imagined_t = states_imagined_t.reshape((self.imagination_rollouts, batch_size, ) + self.state_shape)
-       
-        '''
-        swap axis to have batch first
-        shape = (batch_size, imagination_rollouts, state_shape)
-        '''
-        states_imagined_t = states_imagined_t.transpose(1, 0)
-       
-        self.model.train()
-        self.model_env.train()
-
-        return states_imagined_t
-
-
-    def _one_hot_encoding(self, action_t):
-        batch_size          = action_t.shape[0]
-        action_one_hot_t    = torch.zeros((batch_size, self.actions_count)).to(self.model.device)
-         
-        for b in range(batch_size):
-            action_one_hot_t[b][action_t[b]] = 1.0
+        action_one_hot_t = torch.zeros((batch_size, self.actions_count))
+        action_one_hot_t[range(batch_size), action_idx_t] = 1.0  
+        action_one_hot_t = action_one_hot_t.to(self.model_actor.device)
 
         return action_one_hot_t
 
+
+    def _imagine_trajectory(self, features_initial_t, trajectory_length):
+        '''
+        #TODO
+        1, compute Q values from actor, and Q values next from target actor
+        2, use forward model to traverse trough imagined states
+        3, use reward model to obtain rewards
+        '''
+
+        q_values        = torch.zeros((trajectory_length, self.batch_size, self.actions_count) ).to(self.model_actor.device)
+        q_values_next   = torch.zeros((trajectory_length, self.batch_size, self.actions_count) ).to(self.model_actor.device)
+        action_t        = torch.zeros((trajectory_length, self.batch_size, ), dtype=int).to(self.model_actor.device)
+        reward_t        = torch.zeros((trajectory_length, self.batch_size, )).to(self.model_actor.device)
+
+        for t in range(trajectory_length):
+            pass
+
+
+        return q_values, q_values_next, action_t, reward_t
+
+
+    def save(self, save_path):
+        self.model_features.save(save_path)
+        self.model_forward.save(save_path)
+        self.model_reward.save(save_path)
+        self.model_actor.save(save_path)
+
+    def load(self, load_path):
+        self.model_features.load(load_path)
+        self.model_forward.load(load_path)
+        self.model_reward.load(load_path)
+        self.model_actor.load(load_path)
+
     def get_log(self):
         result = "" 
-        result+= str(round(self.env_loss, 5)) + " "
-        result+= str(round(self.im_entropy, 5)) + " "
-        result+= str(round(self.im_curiosity, 5)) + " "
-        result+= str(round(self.im, 5)) + " "
+        result+= str(round(self.loss_features, 5)) + " "
+        result+= str(round(self.loss_forward, 5)) + " "
+        result+= str(round(self.loss_reward, 5)) + " "
+        result+= str(round(self.loss_actor, 5)) + " "
 
         return result
 
-    def intrinsics_motivation(self, state_t, action_t, state_next_t, state_predicted_t, threshold = 0.001):
-        
-        #compute imagined states, use state_t as initial state
-        states_imagined_t   = self._process_imagination(state_t, self.epsilon)
-        
-        #compute entropy of imagined states
-        im_entropy           = self._compute_entropy(states_imagined_t.detach(), threshold)
-       
-        #compute curiosity
-        state_dif    = ((state_next_t - state_predicted_t)**2).detach()
-        flatten      = state_dif.view(state_dif.size(0), -1)    
 
-        im_curiosity = torch.zeros(self.batch_size).to(self.model.device)
 
-        for b in range(self.batch_size): 
-            shrink  = flatten[b][flatten[b] > threshold]
 
-            if shrink.shape[0] > 0:
-                im_curiosity[b] = shrink.mean()
-
-        return im_entropy, im_curiosity
-
-    def _compute_entropy(self, states_t, threshold):
-        batch_size  = states_t.shape[0]
-        result      = torch.zeros(batch_size).to(self.model_env.device)
-
-        for b in range(batch_size):
-            result[b]   = self._state_entropy(states_t[b], threshold)
-
-        return result
-
-    def _state_entropy(self, state_t, threshold):
-        flatten     = state_t.view(state_t.size(0), -1)
-
-        variance    = torch.std(flatten, dim=0)
-        shrink      = variance[variance > threshold]
-             
-        if shrink.shape[0] > 0:
-            result  = shrink.mean()
-        else:
-            result  = 0.0
-
-        return result
