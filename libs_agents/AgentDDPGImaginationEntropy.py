@@ -2,8 +2,9 @@ import numpy
 import torch
 from .ExperienceBufferContinuous import *
 
+
 class AgentDDPGImaginationEntropy():
-    def __init__(self, env, ModelCritic, ModelActor, ModelEnv, Config):
+    def __init__(self, env, ModelFeatures, ModelCritic, ModelActor, ModelForward, Config):
         self.env = env
 
         config = Config.Config()
@@ -11,32 +12,35 @@ class AgentDDPGImaginationEntropy():
         self.batch_size         = config.batch_size
         self.gamma              = config.gamma
         self.update_frequency   = config.update_frequency
-        self.tau                = config.tau
+        self.tau                =  config.tau
 
-        self.exploration        = config.exploration
+        self.exploration    = config.exploration
 
         self.imagination_rollouts   = config.imagination_rollouts
         self.imagination_steps      = config.imagination_steps
-
         self.entropy_beta           = config.entropy_beta
         self.curiosity_beta         = config.curiosity_beta
-        
-        self.env_learning_rate      = config.env_learning_rate
 
     
         self.state_shape    = self.env.observation_space.shape
         self.actions_count  = self.env.action_space.shape[0]
 
-        
-        self.experience_replay      = ExperienceBufferContinuous(config.experience_replay_size)
+        self.experience_replay = ExperienceBufferContinuous(config.experience_replay_size)
 
-        self.model_actor            = ModelActor.Model(self.state_shape, self.actions_count)
-        self.model_actor_target     = ModelActor.Model(self.state_shape, self.actions_count)
+        self.model_features            = ModelFeatures.Model(self.state_shape)
+        self.model_features_target     = ModelFeatures.Model(self.state_shape)
+        features_shape                 = self.model_features.features_shape
 
-        self.model_critic           = ModelCritic.Model(self.state_shape, self.actions_count)
-        self.model_critic_target    = ModelCritic.Model(self.state_shape, self.actions_count)
+        self.model_actor            = ModelActor.Model(features_shape, self.actions_count)
+        self.model_actor_target     = ModelActor.Model(features_shape, self.actions_count)
 
-        self.model_env              = ModelEnv.Model(self.state_shape, self.actions_count)
+        self.model_critic           = ModelCritic.Model(features_shape, self.actions_count)
+        self.model_critic_target    = ModelCritic.Model(features_shape, self.actions_count)
+
+        self.model_forward          = ModelForward.Model(features_shape, self.actions_count)
+
+        for target_param, param in zip(self.model_features_target.parameters(), self.model_features.parameters()):
+            target_param.data.copy_(param.data)
 
         for target_param, param in zip(self.model_actor_target.parameters(), self.model_actor.parameters()):
             target_param.data.copy_(param.data)
@@ -44,35 +48,28 @@ class AgentDDPGImaginationEntropy():
         for target_param, param in zip(self.model_critic_target.parameters(), self.model_critic.parameters()):
             target_param.data.copy_(param.data)
 
-        self.optimizer_actor    = torch.optim.Adam(self.model_actor.parameters(), lr= config.actor_learning_rate)
-        
-        self.optimizer_critic   = torch.optim.Adam(self.model_critic.parameters(), lr= config.critic_learning_rate)
-        
-        self.optimizer_env      = torch.optim.Adam(self.model_env.parameters(), lr= config.env_learning_rate)
-                        
+        self.optimizer_features = torch.optim.Adam(self.model_features.parameters(), lr= config.learning_rate_features)
+        self.optimizer_actor    = torch.optim.Adam(self.model_actor.parameters(), lr= config.learning_rate_actor)
+        self.optimizer_critic   = torch.optim.Adam(self.model_critic.parameters(), lr= config.learning_rate_critic)
+        self.optimizer_forward  = torch.optim.Adam(self.model_forward.parameters(), lr= config.learning_rate_forward)
+
         self.state          = env.reset()
 
         self.iterations     = 0
 
         self.enable_training()
 
-        self.env_loss       = 0.0
-        self.im_entropy     = 0.0
-        self.im_curiosity   = 0.0
-        self.im             = 0.0
-       
-        
-
+        self.loss_forward   = 0.0
+        self.loss_actor     = 0.0
+        self.loss_critic    = 0.0
+        self.entropy        = 0.0
+        self.curiosity      = 0.0
 
     def enable_training(self):
         self.enabled_training = True
 
     def disable_training(self):
         self.enabled_training = False
-
-
-    
-    
     
     def main(self):
         if self.enabled_training:
@@ -83,12 +80,13 @@ class AgentDDPGImaginationEntropy():
        
         state_t     = torch.from_numpy(self.state).to(self.model_actor.device).unsqueeze(0).float()
 
-        action_t, action = self._sample_action(state_t, self.epsilon)
-
+        features_t  = self.model_features(state_t)
+        action_t, action = self._sample_action(features_t, self.epsilon)
+ 
         action = action.squeeze()
 
-        state_new, self.reward, done, self.info = self.env.step(action)       
-    
+        state_new, self.reward, done, self.info = self.env.step(action)
+
         if self.enabled_training:
             self.experience_replay.add(self.state, action, self.reward, done)
 
@@ -101,7 +99,6 @@ class AgentDDPGImaginationEntropy():
         else:
             self.state = state_new.copy()
 
-
         self.iterations+= 1
 
         return self.reward, done
@@ -113,87 +110,100 @@ class AgentDDPGImaginationEntropy():
         reward_t = reward_t.unsqueeze(-1)
         done_t   = (1.0 - done_t).unsqueeze(-1)
 
-        #environment model state prediction
-        state_predicted_t   = self.model_env(state_t, action_t)
+        '''
+        predict features for state and next state
+        '''
+        features_t          = self.model_features(state_t)
+        features_next_t     = self.model_features_target(state_next_t)
 
-        #env model loss
-        env_loss = (state_next_t.detach() - state_predicted_t)**2
-        env_loss = env_loss.mean()
-
-        #update env model
-        self.optimizer_env.zero_grad()
-        env_loss.backward() 
-        self.optimizer_env.step()
+        action_next_t   = self.model_actor_target.forward(features_next_t).detach()
+        value_next_t    = self.model_critic_target.forward(features_next_t, action_next_t).detach()
 
 
-        im_entropy, im_curiosity    = self.intrinsics_motivation(state_t, action_t, state_next_t, state_predicted_t)
-        im_entropy                  = torch.tanh(self.entropy_beta*im_entropy)
-        im_curiosity                = torch.tanh(self.entropy_beta*im_curiosity)
-        intrinsics_motivation_t     = im_entropy + im_curiosity
-           
+        '''
+        imagine states, and compute their entropy
+        '''        
+        features_imagined_t = self._imagine_states(features_t.detach(), self.imagination_rollouts, self.imagination_steps, self.epsilon)
 
-        action_next_t       = self.model_actor_target.forward(state_next_t).detach()
-        value_next_t        = self.model_critic_target.forward(state_next_t, action_next_t).detach()
- 
-        #target value, Q-learning
-        value_target    = reward_t + intrinsics_motivation_t + self.gamma*done_t*value_next_t
-        value_predicted = self.model_critic.forward(state_t, action_t)
+        entropy_t           = self._compute_entropy(features_imagined_t)
+        entropy_t           = torch.tanh(self.entropy_beta*entropy_t)
+        entropy_t           = entropy_t.detach()
+
+
+        '''
+        predict next features, and compute forward model loss 
+        note : forward model learns next features
+        '''
+        features_predicted_t    = self.model_forward(features_t, action_t)
+
+        loss_forward_   = ((features_next_t.detach() - features_predicted_t)**2)
+        loss_forward    = loss_forward_.mean() 
+
+        curiosity_t     = loss_forward_.view(loss_forward_.size(0), -1).mean(dim=1)
+        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
+        curiosity_t     = curiosity_t.detach()
+
+
 
         #critic loss
-        critic_loss     = ((value_target - value_predicted)**2)
-        critic_loss     = critic_loss.mean()
+        value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
+        value_predicted = self.model_critic.forward(features_t, action_t)
+
+        loss_critic     = ((value_target - value_predicted)**2)
+        loss_critic     = loss_critic.mean()
      
-        #update critic
-        self.optimizer_critic.zero_grad()
-        critic_loss.backward() 
-        self.optimizer_critic.step()
-
+        
         #actor loss
-        actor_loss      = -self.model_critic.forward(state_t, self.model_actor.forward(state_t))
-        actor_loss      = actor_loss.mean()
+        loss_actor      = -self.model_critic.forward(features_t, self.model_actor.forward(features_t))
+        loss_actor      = loss_actor.mean()
 
-        #update actor
-        self.optimizer_actor.zero_grad()       
-        actor_loss.backward()
+
+        #compute loss
+        loss = loss_critic + loss_actor + loss_forward
+
+        #train models    
+        self.optimizer_features.zero_grad()
+        self.optimizer_actor.zero_grad()
+        self.optimizer_critic.zero_grad()
+        self.optimizer_forward.zero_grad()
+
+
+        loss.backward() 
+
+
+        self.optimizer_features.step()
         self.optimizer_actor.step()
+        self.optimizer_critic.step()
+        self.optimizer_forward.step()
+
 
         #update target networks 
+        for target_param, param in zip(self.model_features_target.parameters(), self.model_features.parameters()):
+            target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
+       
         for target_param, param in zip(self.model_actor_target.parameters(), self.model_actor.parameters()):
             target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
        
         for target_param, param in zip(self.model_critic_target.parameters(), self.model_critic.parameters()):
             target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
 
-        #log smoothed intrinsics motivsation values
+
+        '''
+        log some stats, using exponential smoothing
+        '''
         k = 0.02
-        self.env_loss       = (1.0 - k)*self.env_loss       + k*env_loss.mean().detach().to("cpu").numpy()
-        self.im_entropy     = (1.0 - k)*self.im_entropy     + k*im_entropy.mean().detach().to("cpu").numpy()
-        self.im_curiosity   = (1.0 - k)*self.im_curiosity   + k*im_curiosity.mean().detach().to("cpu").numpy()
-        self.im             = (1.0 - k)*self.im             + k*intrinsics_motivation_t.mean().detach().to("cpu").numpy()
 
-    def save(self, save_path):
-        self.model_critic.save(save_path)
-        self.model_actor.save(save_path)
-        self.model_env.save(save_path)
-       
-    def load(self, load_path):
-        self.model_critic.load(load_path)
-        self.model_actor.load(load_path)
-        self.model_env.load(load_path)
+        self.loss_forward   = (1.0 - k)*self.loss_forward   + k*loss_forward.detach().to("cpu").numpy()
+        self.loss_actor     = (1.0 - k)*self.loss_actor     + k*loss_actor.detach().to("cpu").numpy()
+        self.loss_critic    = (1.0 - k)*self.loss_critic    + k*loss_critic.detach().to("cpu").numpy()
+        self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
+        self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
+
+        #print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
 
-    def get_log(self):
-        result = "" 
-        result+= str(round(self.env_loss, 5)) + " "
-        result+= str(round(self.im_entropy, 5)) + " "
-        result+= str(round(self.im_curiosity, 5)) + " "
-        result+= str(round(self.im, 5)) + " "
-        
-        return result
-      
-
-    def _sample_action(self, state_t, epsilon):
-        action_t    = self.model_actor(state_t)
+    def _sample_action(self, features_t, epsilon):
+        action_t    = self.model_actor(features_t)
         action_t    = action_t + epsilon*torch.randn(action_t.shape).to(self.model_actor.device)
         action_t    = action_t.clamp(-1.0, 1.0)
 
@@ -201,91 +211,63 @@ class AgentDDPGImaginationEntropy():
 
         return action_t, action_np
 
-    '''
-    compute imagined states
 
-    states_t : initial (root states) in shape = (batch_size, ) + state_shape
-    epsilon  : epsilon greedy factor, 1 = total random, 0 = total deterministic
+    def _imagine_states(self, features_initial_t, rollouts, steps, epsilon):
+        batch_size = features_initial_t.shape[0]
 
-    returns imagined states in shape
-    shape = (batch_size, imagination_rollouts, ) + state_shape
+        features_shape = features_initial_t.shape[1:]
 
-
-    f.e. result[5] is imagined states from root state states_t[5]
-    result[5][0] correspond to rollout 0 - imagined with action 0
-    result[5][1] correspond to rollout 1 - imagined with action 1
-    result[5][2] correspond to rollout 1 - imagined with action 2
-    '''
-    def _process_imagination(self, states_t, epsilon):
-
-        self.model_actor.eval()
-        self.model_critic.eval()
-        self.model_env.eval()
-
-        batch_size  = states_t.shape[0]
-
-        states_imagined_t      = torch.zeros((self.imagination_rollouts, batch_size, ) + self.state_shape ).to(self.model_env.device)
-
-        for r in range(self.imagination_rollouts):
-            states_imagined_t[r] = states_t.clone()
-
+       
         '''
-        reshape, to create one huge batch - much more faster
-        shape = (imagination_rollouts*batch_size, state_shape)
+        features_initial = (imagination_rollouts, batch_size, features_shape)
         '''
-        states_imagined_t = states_imagined_t.reshape((self.imagination_rollouts*batch_size, ) + self.state_shape)
+        features_initial = torch.zeros((rollouts, batch_size, ) + features_shape).to(features_initial_t.device)
+        for r in range(rollouts):
+            features_initial[r] = features_initial_t.clone()
 
-        for s in range(self.imagination_steps):
-            action_t, _             = self._sample_action(states_imagined_t, epsilon)
-            states_imagined_next_t  = self.model_env(states_imagined_t, action_t)
-            states_imagined_t       = states_imagined_next_t.clone()
+        features_imagined_t = torch.zeros((rollouts, batch_size, ) + features_shape).to(features_initial_t.device)
 
-        '''
-        reshape back
-        shape = (imagination_rollouts, batch_size, state_shape)
-        '''
-        states_imagined_t = states_imagined_t.reshape((self.imagination_rollouts, batch_size, ) + self.state_shape)
+        for s in range(steps):
+            for r in range(rollouts):
+                action_t, _             = self._sample_action(features_initial[r], epsilon)
+                features_imagined_t[r]  = self.model_forward(features_initial[r], action_t).detach()
+                features_initial[r]     = features_imagined_t[r].clone()
 
         '''
         swap axis to have batch first
-        shape = (batch_size, imagination_rollouts, state_shape)
+        shape = (batch_size, imagination_rollouts, features_shape)
         '''
-        states_imagined_t = states_imagined_t.transpose(1, 0)
+        features_imagined_t = features_imagined_t.transpose(1, 0)
+     
+        return features_imagined_t
 
 
-        self.model_actor.train()
-        self.model_critic.train()
-        self.model_env.train()
-
-        return states_imagined_t
-
-    
-
-    def _compute_entropy(self, states_t, states_initial_t):
-        batch_size  = states_t.shape[0]
-        result      = torch.zeros(batch_size).to(self.model_env.device)
+    def _compute_entropy(self, x):
+        batch_size  = x.shape[0]
+        result      = torch.zeros(batch_size).to(x.device)
 
         for b in range(batch_size):
-            s_dif       = states_t[b] - states_initial_t[b]
-            flatten     = s_dif.view(s_dif.size(0), -1)
-            
-            result[b]   = torch.var(flatten, dim=0).mean()
-
+            flatten     = x[b].view(x[b].size(0), -1)
+            var         = torch.std(flatten, dim=0)
+            result[b]   = var.mean()
+        
         return result
 
 
-    def intrinsics_motivation(self, state_t, action_t, state_next_t, state_predicted_t):
-        #compute imagined states, use state_t as initial root state
-        states_imagined_t   = self._process_imagination(state_t, self.epsilon)
-        
-        #compute entropy of imagined states
-        im_entropy           = self._compute_entropy(states_imagined_t.detach(), state_t)
-       
-        #compute curiosity
-        im_curiosity         = ((state_next_t - state_predicted_t)**2).mean(dim = 1).detach()
-        
+    def save(self, save_path):
+        self.model_critic.save(save_path)
+        self.model_actor.save(save_path)
 
-        return im_entropy, im_curiosity
+    def load(self, load_path):
+        self.model_critic.load(load_path)
+        self.model_actor.load(load_path)
 
+    def get_log(self):
+        result = "" 
+        result+= str(round(self.loss_forward, 7)) + " "
+        result+= str(round(self.loss_actor, 7)) + " "
+        result+= str(round(self.loss_critic, 7)) + " "
+        result+= str(round(self.entropy, 7)) + " "
+        result+= str(round(self.curiosity, 7)) + " "
 
-      
+        return result

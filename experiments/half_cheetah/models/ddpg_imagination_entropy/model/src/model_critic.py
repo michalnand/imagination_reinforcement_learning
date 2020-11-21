@@ -23,7 +23,9 @@ class Model(torch.nn.Module):
         self.model = nn.Sequential(*self.layers) 
         self.model.to(self.device)
 
+        print("model_critic")
         print(self.model)
+        print("\n\n")
        
 
     def forward(self, state, action):
@@ -32,11 +34,9 @@ class Model(torch.nn.Module):
 
      
     def save(self, path):
-        print("saving to ", path)
         torch.save(self.model.state_dict(), path + "trained/model_critic.pt")
 
     def load(self, path):       
-        print("loading from ", path)
         self.model.load_state_dict(torch.load(path + "trained/model_critic.pt", map_location = self.device))
         self.model.eval()  
     

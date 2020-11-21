@@ -1,5 +1,5 @@
 import gym
-import pybulletgym
+import pybullet_envs
 import numpy
 import time
 
@@ -10,21 +10,23 @@ import libs_agents
 from libs_common.Training import *
 
 
+import models.ddpg_imagination_entropy.model.src.model_features   as ModelFeatures
 import models.ddpg_imagination_entropy.model.src.model_critic     as ModelCritic
 import models.ddpg_imagination_entropy.model.src.model_actor      as ModelActor
-import models.ddpg_imagination_entropy.model.src.model_env        as ModelEnv
+import models.ddpg_imagination_entropy.model.src.model_forward    as ModelForward
 import models.ddpg_imagination_entropy.model.src.config           as Config
 
 path = "models/ddpg_imagination_entropy/model/"
 
-env = gym.make("HalfCheetahPyBulletEnv-v0")
+env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
 #env.render()
- 
-agent = libs_agents.AgentDDPGImaginationEntropy(env, ModelCritic, ModelActor, ModelEnv, Config)
+
+agent = libs_agents.AgentDDPGImaginationEntropy(env, ModelFeatures, ModelCritic, ModelActor, ModelForward, Config)
 
 max_iterations = 4*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
 trainig.run()
+
 
 '''
 agent.load(path)
