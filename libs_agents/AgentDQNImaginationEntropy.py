@@ -15,11 +15,10 @@ class AgentDQNImaginationEntropy():
         self.target_update      = config.target_update
         self.update_frequency   = config.update_frequency 
 
-
-        self.entropy_beta           = config.entropy_beta
         self.imagination_rollouts   = config.imagination_rollouts
         self.imagination_steps      = config.imagination_steps
-        
+        self.entropy_beta           = config.entropy_beta
+        self.curiosity_beta         = config.curiosity_beta
 
         self.state_shape        = self.env.observation_space.shape
         self.actions_count      = self.env.action_space.n
@@ -54,6 +53,7 @@ class AgentDQNImaginationEntropy():
         self.loss_actor     = 0.0
         self.loss_forward   = 0.0
         self.entropy        = 0.0
+        self.curiosity      = 0.0
         
 
 
@@ -121,7 +121,6 @@ class AgentDQNImaginationEntropy():
         1, sample random minibatch
         '''
         state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_actor.device)
-        action_one_hot_t   = self._action_one_hot(action_t)
 
         '''
         2, predict features for state and next state
@@ -139,39 +138,46 @@ class AgentDQNImaginationEntropy():
         entropy_t           = torch.tanh(self.entropy_beta*entropy_t)
         entropy_t           = entropy_t.detach()
 
+
         '''
-        3, predict Q-values using features, and actor model
+        4, predict next features, and compute forward model loss 
+        note : forward model learns next features
+        '''
+        action_one_hot_t        = self._action_one_hot(action_t)
+        features_predicted_t    = self.model_forward(features_t, action_one_hot_t)
+
+        loss_forward_   = ((features_next_t.detach() - features_predicted_t)**2)
+        loss_forward    = loss_forward_.mean() 
+
+        curiosity_t     = loss_forward_.view(loss_forward_.size(0), -1).mean(dim=1)
+        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
+        curiosity_t     = curiosity_t.detach()
+
+        '''
+        5, predict Q-values using features, and actor model
         '''
         q_predicted      = self.model_actor(features_t)
         q_predicted_next = self.model_actor_target(features_next_t)
 
 
         '''
-        4, compute loss for Q values, using Q-learning
+        6, compute loss for Q values, using Q-learning
         '''
         #compute target
         q_target         = q_predicted.clone()
         for j in range(self.batch_size): 
             action_idx              = action_t[j]
-            q_target[j][action_idx] = entropy_t[j] + reward_t[j] + self.gamma*torch.max(q_predicted_next[j])*(1- done_t[j])
+            q_target[j][action_idx] = entropy_t[j] + curiosity_t[j] + reward_t[j] + self.gamma*torch.max(q_predicted_next[j])*(1- done_t[j])
  
         #compute loss
         loss_actor  = ((q_target.detach() - q_predicted)**2)
         loss_actor  = loss_actor.mean() 
 
 
-        '''
-        5, predict next features, and compute forward model loss 
-        note : forward model learns next features
-        '''
-        action_one_hot_t        = self._action_one_hot(action_t)
-        features_predicted_t    = self.model_forward(features_t, action_one_hot_t)
-
-        loss_forward  = ((features_next_t.detach() - features_predicted_t)**2)
-        loss_forward  = loss_forward.mean() 
+        
 
         '''
-        6, compute final loss, gradients clamp and train
+        7, compute final loss, gradients clamp and train
         '''
         loss = loss_actor + loss_forward
 
@@ -198,15 +204,16 @@ class AgentDQNImaginationEntropy():
 
 
         '''
-        7, log some stats, using exponential smoothing
+        8, log some stats, using exponential smoothing
         '''
         k = 0.02
 
         self.loss_forward   = (1.0 - k)*self.loss_forward   + k*loss_forward.detach().to("cpu").numpy()
         self.loss_actor     = (1.0 - k)*self.loss_actor     + k*loss_actor.detach().to("cpu").numpy()
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
+        self.curiosity      = (1.0 - k)*self.curiosity        + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        #print(self.loss_forward, self.loss_actor, self.entropy, "\n\n")
+        #print(self.loss_forward, self.loss_actor, self.entropy, self.curiosity, "\n\n")
 
     def _sample_action(self, features_t, epsilon):
 
@@ -302,9 +309,10 @@ class AgentDQNImaginationEntropy():
 
     def get_log(self):
         result = "" 
-        result+= str(round(self.loss_forward, 5)) + " "
-        result+= str(round(self.loss_actor, 5)) + " "
-        result+= str(round(self.entropy, 5)) + " "
+        result+= str(round(self.loss_forward, 7)) + " "
+        result+= str(round(self.loss_actor, 7)) + " "
+        result+= str(round(self.entropy, 7)) + " "
+        result+= str(round(self.curiosity, 7)) + " "
 
         return result
 

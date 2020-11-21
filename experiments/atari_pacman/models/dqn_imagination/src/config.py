@@ -18,5 +18,6 @@ class Config():
 
         self.imagination_rollouts   = 8
         self.imagination_steps      = 1
-        self.entropy_beta           = 1.0
+        self.entropy_beta           = 10.0
+        self.curiosity_beta         = 10.0
 
