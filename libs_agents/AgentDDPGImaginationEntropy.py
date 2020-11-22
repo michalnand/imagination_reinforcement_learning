@@ -6,7 +6,7 @@ from .ExperienceBufferContinuous import *
 #import sys
 
 class AgentDDPGImaginationEntropy():
-    def __init__(self, env, ModelFeatures, ModelCritic, ModelActor, ModelForward, Config):
+    def __init__(self, env, ModelCritic, ModelActor, ModelForward, Config):
         self.env = env
 
         config = Config.Config()
@@ -29,28 +29,21 @@ class AgentDDPGImaginationEntropy():
 
         self.experience_replay = ExperienceBufferContinuous(config.experience_replay_size)
 
-        self.model_features            = ModelFeatures.Model(self.state_shape)
-        self.model_features_target     = ModelFeatures.Model(self.state_shape)
-        features_shape                 = self.model_features.features_shape
+        self.model_actor            = ModelActor.Model(self.state_shape, self.actions_count)
+        self.model_actor_target     = ModelActor.Model(self.state_shape, self.actions_count)
 
-        self.model_actor            = ModelActor.Model(features_shape, self.actions_count)
-        self.model_actor_target     = ModelActor.Model(features_shape, self.actions_count)
+        self.model_critic           = ModelCritic.Model(self.state_shape, self.actions_count)
+        self.model_critic_target    = ModelCritic.Model(self.state_shape, self.actions_count)
 
-        self.model_critic           = ModelCritic.Model(features_shape, self.actions_count)
-        self.model_critic_target    = ModelCritic.Model(features_shape, self.actions_count)
+        self.model_forward          = ModelForward.Model(self.state_shape, self.actions_count)
 
-        self.model_forward          = ModelForward.Model(features_shape, self.actions_count)
-
-        for target_param, param in zip(self.model_features_target.parameters(), self.model_features.parameters()):
-            target_param.data.copy_(param.data)
-
+        
         for target_param, param in zip(self.model_actor_target.parameters(), self.model_actor.parameters()):
             target_param.data.copy_(param.data)
 
         for target_param, param in zip(self.model_critic_target.parameters(), self.model_critic.parameters()):
             target_param.data.copy_(param.data)
 
-        self.optimizer_features = torch.optim.Adam(self.model_features.parameters(), lr= config.learning_rate_features)
         self.optimizer_actor    = torch.optim.Adam(self.model_actor.parameters(), lr= config.learning_rate_actor)
         self.optimizer_critic   = torch.optim.Adam(self.model_critic.parameters(), lr= config.learning_rate_critic)
         self.optimizer_forward  = torch.optim.Adam(self.model_forward.parameters(), lr= config.learning_rate_forward)
@@ -82,8 +75,7 @@ class AgentDDPGImaginationEntropy():
        
         state_t     = torch.from_numpy(self.state).to(self.model_actor.device).unsqueeze(0).float()
 
-        features_t  = self.model_features(state_t)
-        action_t, action = self._sample_action(features_t, self.epsilon)
+        action_t, action = self._sample_action(state_t, self.epsilon)
  
         action = action.squeeze()
 
@@ -112,33 +104,23 @@ class AgentDDPGImaginationEntropy():
         reward_t = reward_t.unsqueeze(-1)
         done_t   = (1.0 - done_t).unsqueeze(-1)
 
-        '''
-        predict features for state and next state
-        '''
-        features_t          = self.model_features(state_t)
-        features_next_t     = self.model_features_target(state_next_t)
-
-        action_next_t   = self.model_actor_target.forward(features_next_t).detach()
-        value_next_t    = self.model_critic_target.forward(features_next_t, action_next_t).detach()
+        action_next_t   = self.model_actor_target.forward(state_next_t).detach()
+        value_next_t    = self.model_critic_target.forward(state_next_t, action_next_t).detach()
 
 
         '''
         imagine states, and compute their entropy
         '''        
-        features_imagined_t = self._imagine_states(features_t.detach(), self.imagination_rollouts, self.imagination_steps, self.epsilon)
+        states_imagined_t = self._imagine_states(state_t, self.imagination_rollouts, self.imagination_steps, self.epsilon)
 
-        entropy_t           = self._compute_entropy(features_imagined_t)
+        entropy_t           = self._compute_entropy(states_imagined_t)
         entropy_t           = torch.tanh(self.entropy_beta*entropy_t)
         entropy_t           = entropy_t.detach()
 
 
-        '''
-        predict next features, and compute forward model loss 
-        note : forward model learns next features
-        '''
-        features_predicted_t    = self.model_forward(features_t, action_t)
+        state_predicted_t    = self.model_forward(state_t, action_t)
 
-        loss_forward_   = ((features_next_t.detach() - features_predicted_t)**2)
+        loss_forward_   = ((state_next_t.detach() - state_predicted_t)**2)
         loss_forward    = loss_forward_.mean() 
 
         curiosity_t     = loss_forward_.view(loss_forward_.size(0), -1).mean(dim=1)
@@ -146,43 +128,28 @@ class AgentDDPGImaginationEntropy():
         curiosity_t     = curiosity_t.detach()
 
 
-
         #critic loss
         value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
-        value_predicted = self.model_critic.forward(features_t, action_t)
+        value_predicted = self.model_critic.forward(state_t, action_t)
 
         loss_critic     = ((value_target - value_predicted)**2)
         loss_critic     = loss_critic.mean()
      
-        
+        #update critic
+        self.optimizer_critic.zero_grad()
+        loss_critic.backward() 
+        self.optimizer_critic.step()
+
         #actor loss
-        loss_actor      = -self.model_critic.forward(features_t, self.model_actor.forward(features_t))
+        loss_actor      = -self.model_critic.forward(state_t, self.model_actor.forward(state_t))
         loss_actor      = loss_actor.mean()
 
-
-        #compute loss
-        loss = loss_critic + loss_actor + loss_forward
-
-        #train models    
-        self.optimizer_features.zero_grad()
-        self.optimizer_actor.zero_grad()
-        self.optimizer_critic.zero_grad()
-        self.optimizer_forward.zero_grad()
-
-
-        loss.backward() 
-
-
-        self.optimizer_features.step()
+        #update actor
+        self.optimizer_actor.zero_grad()       
+        loss_actor.backward()
         self.optimizer_actor.step()
-        self.optimizer_critic.step()
-        self.optimizer_forward.step()
 
-
-        #update target networks 
-        for target_param, param in zip(self.model_features_target.parameters(), self.model_features.parameters()):
-            target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
-       
+        # update target networks 
         for target_param, param in zip(self.model_actor_target.parameters(), self.model_actor.parameters()):
             target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
        
@@ -202,12 +169,9 @@ class AgentDDPGImaginationEntropy():
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
 
-        '''
         print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
-        make_dot(loss).render("model_graph", format="png")
-        sys.exit()
-        '''
+
 
     def _sample_action(self, features_t, epsilon):
         action_t    = self.model_actor(features_t)
@@ -262,13 +226,11 @@ class AgentDDPGImaginationEntropy():
 
 
     def save(self, save_path):
-        self.model_features.save(save_path)
         self.model_actor.save(save_path)
         self.model_critic.save(save_path)
         self.model_forward.save(save_path)
 
     def load(self, load_path):
-        self.model_features.load(load_path)
         self.model_actor.load(load_path)
         self.model_critic.load(load_path)
         self.model_forward.load(load_path)

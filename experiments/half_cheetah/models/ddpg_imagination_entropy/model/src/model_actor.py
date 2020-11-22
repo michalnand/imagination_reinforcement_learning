@@ -8,20 +8,23 @@ import libs_layers
 
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, hidden_count = 128):
+    def __init__(self, input_shape, outputs_count, hidden_count = 256):
         super(Model, self).__init__()
 
         self.device = "cpu"
         
-        self.layers = [      
-            libs_layers.NoisyLinear(input_shape[0], hidden_count),
+        self.layers = [     
+            nn.Linear(input_shape[0], hidden_count),
+            nn.ReLU(),             
+            libs_layers.NoisyLinear(hidden_count, hidden_count//2),
             nn.ReLU(),    
-            libs_layers.NoisyLinear(hidden_count, outputs_count),
+            libs_layers.NoisyLinear(hidden_count//2, outputs_count),
             nn.Tanh()
         ]
 
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
-        torch.nn.init.uniform_(self.layers[2].weight, -0.3, 0.3)
+        torch.nn.init.xavier_uniform_(self.layers[2].weight)
+        torch.nn.init.uniform_(self.layers[4].weight, -0.3, 0.3)
 
         self.model = nn.Sequential(*self.layers)
         self.model.to(self.device)

@@ -13,7 +13,7 @@ class Model(torch.nn.Module):
             nn.Linear(hidden_count, hidden_count//2),
             nn.ReLU(),            
             nn.Linear(hidden_count//2, 1)           
-        ] 
+        ]  
 
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
         torch.nn.init.xavier_uniform_(self.layers[2].weight)

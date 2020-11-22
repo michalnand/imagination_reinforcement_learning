@@ -8,13 +8,13 @@ import libs_agents
 from libs_common.Training import *
 from libs_common.atari_wrapper import *
 
-import models.dqn_imagination.src.model_features    as ModelFeatures
-import models.dqn_imagination.src.model_forward     as ModelForward
-import models.dqn_imagination.src.model_actor       as ModelActor
-import models.dqn_imagination.src.config            as Config
+import models.dqn_imagination_entropy.src.model_features    as ModelFeatures
+import models.dqn_imagination_entropy.src.model_forward     as ModelForward
+import models.dqn_imagination_entropy.src.model_actor       as ModelActor
+import models.dqn_imagination_entropy.src.config            as Config
 
 
-path = "models/dqn_imagination/"
+path = "models/dqn_imagination_entropy/"
 
 env = gym.make("MsPacmanNoFrameskip-v4")
 
