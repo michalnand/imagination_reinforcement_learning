@@ -128,6 +128,12 @@ class AgentDDPGImaginationEntropy():
         curiosity_t     = curiosity_t.detach()
 
 
+        #update forward
+        self.optimizer_forward.zero_grad()
+        loss_forward.backward() 
+        self.optimizer_forward.step()
+
+
         #critic loss
         value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
         value_predicted = self.model_critic.forward(state_t, action_t)
