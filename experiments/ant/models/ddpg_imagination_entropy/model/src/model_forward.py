@@ -15,9 +15,9 @@ class Model(torch.nn.Module):
         
         self.layers = [ 
             nn.Linear(input_shape[0] + outputs_count, hidden_count),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_count, hidden_count//2),
-            nn.ReLU(),           
+            nn.Tanh(),           
             nn.Linear(hidden_count//2, input_shape[0])
         ]
 
@@ -34,7 +34,7 @@ class Model(torch.nn.Module):
        
     def forward(self, state, action):
         x = torch.cat([state, action], dim = 1) 
-        return self.model(x) + state
+        return self.model(x)
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")
