@@ -17,7 +17,7 @@ class Config():
         self.learning_rate_features = 0.0002
         self.learning_rate_forward  = 0.0002
         self.learning_rate_critic   = 0.0002
-        self.learning_rate_actor    = 0.0001
+        self.learning_rate_actor    = 0.0001 
       
 
         self.imagination_rollouts   = 16

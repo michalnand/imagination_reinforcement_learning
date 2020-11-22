@@ -3,7 +3,7 @@ import libs_common.decay
 class Config(): 
 
     def __init__(self):
-        self.gamma                  = 0.99
+        self.gamma                  = 0.95
         self.update_frequency       = 4
         self.target_update          = 10000
 

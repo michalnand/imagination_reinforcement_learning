@@ -8,16 +8,15 @@ import libs_layers
 
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, hidden_count = 256):
+    def __init__(self, input_shape, outputs_count, hidden_count = 128):
         super(Model, self).__init__()
 
         self.device = "cpu"
         
-         
-        self.layers = [           
-            libs_layers.NoisyLinear(input_shape[0], hidden_count//2),
+        self.layers = [      
+            libs_layers.NoisyLinear(input_shape[0], hidden_count),
             nn.ReLU(),    
-            libs_layers.NoisyLinear(hidden_count//2, outputs_count),
+            libs_layers.NoisyLinear(hidden_count, outputs_count),
             nn.Tanh()
         ]
 

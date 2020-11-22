@@ -29,11 +29,9 @@ class Model(torch.nn.Module):
         print(self.model)
         print("\n\n")
        
-
     def forward(self, state):
         return self.model(state)
 
-     
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_features.pt")
 

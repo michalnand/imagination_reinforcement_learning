@@ -7,7 +7,6 @@ class Model(torch.nn.Module):
 
         self.device = "cpu"
 
-
         self.layers = [ 
             nn.Linear(input_shape[0] + outputs_count, hidden_count),
             nn.ReLU(),

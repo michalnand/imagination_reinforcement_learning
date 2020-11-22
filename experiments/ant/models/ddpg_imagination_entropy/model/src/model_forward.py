@@ -32,12 +32,10 @@ class Model(torch.nn.Module):
         print(self.model)
         print("\n\n")
        
-
     def forward(self, features, action):
         x = torch.cat([features, action], dim = 1)
         return self.model(x)
 
-     
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")
 

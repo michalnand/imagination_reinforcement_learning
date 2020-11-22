@@ -2,6 +2,8 @@ import numpy
 import torch
 from .ExperienceBufferContinuous import *
 
+#from torchviz import make_dot
+#import sys
 
 class AgentDDPGImaginationEntropy():
     def __init__(self, env, ModelFeatures, ModelCritic, ModelActor, ModelForward, Config):
@@ -199,8 +201,13 @@ class AgentDDPGImaginationEntropy():
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        #print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
+        '''
+        print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
+
+        make_dot(loss).render("model_graph", format="png")
+        sys.exit()
+        '''
 
     def _sample_action(self, features_t, epsilon):
         action_t    = self.model_actor(features_t)
@@ -255,12 +262,16 @@ class AgentDDPGImaginationEntropy():
 
 
     def save(self, save_path):
-        self.model_critic.save(save_path)
+        self.model_features.save(save_path)
         self.model_actor.save(save_path)
+        self.model_critic.save(save_path)
+        self.model_forward.save(save_path)
 
     def load(self, load_path):
-        self.model_critic.load(load_path)
+        self.model_features.load(load_path)
         self.model_actor.load(load_path)
+        self.model_critic.load(load_path)
+        self.model_forward.load(load_path)
 
     def get_log(self):
         result = "" 
