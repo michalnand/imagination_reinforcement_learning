@@ -8,9 +8,11 @@ import libs_agents
 from libs_common.Training import *
 from libs_common.atari_wrapper import *
 
-import models.dqn_imagination_entropy.src.model     as Model
-import models.dqn_imagination_entropy.src.model_env as ModelEnv
-import models.dqn_imagination_entropy.src.config    as Config
+import models.dqn_imagination_entropy.src.model_features    as ModelFeatures
+import models.dqn_imagination_entropy.src.model_forward     as ModelForward
+import models.dqn_imagination_entropy.src.model_actor       as ModelActor
+import models.dqn_imagination_entropy.src.config            as Config
+
 
 
 path = "models/dqn_imagination_entropy/"
@@ -21,7 +23,7 @@ env = AtariWrapper(env)
 env.reset()
 
 
-agent = libs_agents.AgentDQNImaginationEntropy(env, Model, ModelEnv, Config)
+agent = libs_agents.AgentDQNImaginationEntropy(env, ModelFeatures, ModelActor, ModelForward, Config)
 
 max_iterations = 10*(10**6) 
 
