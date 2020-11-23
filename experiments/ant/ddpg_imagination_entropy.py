@@ -15,23 +15,22 @@ import models.ddpg_imagination_entropy.model.src.model_actor      as ModelActor
 import models.ddpg_imagination_entropy.model.src.model_forward    as ModelForward
 import models.ddpg_imagination_entropy.model.src.config           as Config
 
-path = "models/ddpg_imagination_entropy/model/"
+path = "models/ddpg_imagination_entropy/run_0/"
 
 env = pybullet_envs.make("AntBulletEnv-v0")
-#env.render()
+env.render()
 
 agent = libs_agents.AgentDDPGImaginationEntropy(env, ModelCritic, ModelActor, ModelForward, Config)
 
 max_iterations = 4*(10**6)
-trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
-trainig.run()
+#trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
+#trainig.run()
 
 
-'''
+
 agent.load(path)
 agent.disable_training()
 while True:
     reward, done = agent.main()
     env.render()
     time.sleep(0.01)
-'''
