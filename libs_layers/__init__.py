@@ -1,6 +1,5 @@
-from .Bias2D import *
-from .NoiseLayer import *
 from .NoisyLinear import *
+from .NoisyLinearFull import *
 from .SkipInit import *
 from .LSTM import *
 from .GRU import *

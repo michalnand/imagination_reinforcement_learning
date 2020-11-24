@@ -55,8 +55,15 @@ class Model(torch.nn.Module):
         print("\n\n")
        
     def forward(self, state, action):
-        x = torch.cat([state, action], dim = 1) 
+
+        #reshape, to (batch, state, sequence)
+        state_         = state.transpose(1, 2)
+        action_        = action.transpose(1, 2)
+ 
+        x = torch.cat([state_, action_], dim = 1) 
         y = self.model(x)
+
+        y = y.transpose(2, 1)
         return y
 
     def save(self, path):
@@ -76,8 +83,8 @@ if __name__ == "__main__":
 
     model = Model((features_count, sequence_length), outputs_count)
 
-    state   = torch.randn((batch_size, ) + (features_count, sequence_length))
-    action  = torch.randn((batch_size, ) + (outputs_count, sequence_length))
+    state   = torch.randn((batch_size, ) + (sequence_length, features_count))
+    action  = torch.randn((batch_size, ) + (sequence_length, outputs_count))
 
     y = model(state, action)
 

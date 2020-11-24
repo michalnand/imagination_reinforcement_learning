@@ -16,9 +16,9 @@ class Model(torch.nn.Module):
         self.layers = [     
             nn.Linear(input_shape[0], hidden_count),
             nn.ReLU(),             
-            libs_layers.NoisyLinear(hidden_count, hidden_count//2),
+            libs_layers.NoisyLinearFull(hidden_count, hidden_count//2),
             nn.ReLU(),    
-            libs_layers.NoisyLinear(hidden_count//2, outputs_count),
+            libs_layers.NoisyLinearFull(hidden_count//2, outputs_count),
             nn.Tanh()
         ]
 

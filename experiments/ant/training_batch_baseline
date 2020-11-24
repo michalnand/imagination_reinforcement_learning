@@ -1,0 +1,23 @@
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_0
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_1
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_2
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_3
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_4
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_5
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_6
+
+python3 ddpg_baseline.py
+cp -r models/ddpg_baseline/model/  models/ddpg_baseline/run_7

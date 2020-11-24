@@ -65,7 +65,7 @@ class ExperienceBufferContinuous():
 
         self.indices = []
         for i in range(batch_size):
-            self.indices.append(numpy.random.randint(self.length() - 1 - 32))
+            self.indices.append(numpy.random.randint(self.length() - 1))
 
         for i in range(batch_size):
             n               = self.indices[i]
@@ -96,15 +96,17 @@ class ExperienceBufferContinuous():
                 n = self.indices[b]
             else:
                 n  = numpy.random.randint(self.length() - 1 - sequence_length)
-            for s in range(sequence_length):
-                state_t[b][s]      = torch.from_numpy(self.state_b[n + s])
-                action_t[b][s]     = torch.from_numpy(self.action_b[n + s])
-                state_next_t[b][s] = torch.from_numpy(self.state_b[n + 1 + s])
+
+            if n < self.length() - 1 - sequence_length:
+                for s in range(sequence_length):
+                    state_t[b][s]      = torch.from_numpy(self.state_b[n + s])
+                    action_t[b][s]     = torch.from_numpy(self.action_b[n + s])
+                    state_next_t[b][s] = torch.from_numpy(self.state_b[n + 1 + s])
 
         state_t         = state_t.to(device).detach()
         action_t        = action_t.to(device).detach()
         state_next_t    = state_next_t.to(device).detach()
-        
+
         return state_t, action_t, state_next_t
     
 if __name__ == "__main__":

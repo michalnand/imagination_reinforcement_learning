@@ -112,10 +112,6 @@ class AgentDDPGEntropyTrajectory():
         '''
         state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_critic.device, True)
 
-        state_seq_t         = state_seq_t.transpose(1, 2)
-        action_seq_t        = action_seq_t.transpose(1, 2)
-        state_next_seq_t    = state_next_seq_t.transpose(1, 2)
-
         state_next_seq_predicted_t = self.model_forward(state_seq_t, action_seq_t)
 
         entropy_t    = self._compute_entropy(state_next_seq_predicted_t)
@@ -177,8 +173,7 @@ class AgentDDPGEntropyTrajectory():
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-
-        print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
+        #print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
     def _sample_action(self, features_t, epsilon):
         action_t    = self.model_actor(features_t)
@@ -190,7 +185,7 @@ class AgentDDPGEntropyTrajectory():
         return action_t, action_np
 
     def _compute_entropy(self, x):
-        return x.std(dim = 2).mean(dim = 1)
+        return x.std(dim = 1).mean(dim = 1)
         
 
     def save(self, save_path):

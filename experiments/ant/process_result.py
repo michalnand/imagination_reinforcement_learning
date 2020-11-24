@@ -23,6 +23,7 @@ rl_stats_compute_ddpg = RLStatsCompute(files, result_path + "ddpg_result_stats.l
 files = []
 files.append("./models/ddpg_imagination_entropy/run_0/result/result.log")
 files.append("./models/ddpg_imagination_entropy/run_1/result/result.log")
+files.append("./models/ddpg_imagination_entropy/run_2/result/result.log")
 rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_imagination_entropy_result_stats.log") 
 
 

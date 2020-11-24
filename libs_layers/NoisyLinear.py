@@ -36,15 +36,14 @@ class NoisyLinear(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    in_features     = 6*6*64
-    out_features    = 7
+    in_features     = 32
+    out_features    = 16
 
     layer = NoisyLinear(in_features, out_features)
 
-    for j in range(4):
-        input  = torch.randn((10, in_features))
-        for i in range(10):
-            output = layer.forward(input)
-            print(output)
-        print("\n\n\n")
+    input  = torch.randn((10, in_features))
+    
+    for i in range(4):
+        output = layer.forward(input)
+        print(output, "\n\n\n")
     
