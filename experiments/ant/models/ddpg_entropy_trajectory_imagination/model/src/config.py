@@ -20,5 +20,5 @@ class Config():
       
 
         self.trajectory_length      = 16
-        self.entropy_beta           = 0.1
+        self.entropy_beta           = 1.0
         self.curiosity_beta         = 1.0

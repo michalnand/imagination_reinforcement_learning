@@ -41,19 +41,32 @@ class RLStatsCompute:
         return iterations, games, total_score, episode_score
         
 
-    def compute_stats(self, data, interval = 0.95):
+    def compute_stats(self, data, confidence = 0.95):
+
+        '''
         count   = data.shape[0]
-        alpha   = 1.0 - interval
-        df      = count - 1
-        t       = stats.t.ppf(1.0 - alpha/2.0, df)  
+        alpha   = 1.0 - confidence
+        t       = stats.t.ppf(1.0 - alpha/2.0, count - 1)  
     
         mean = numpy.mean(data, axis = 0)
         std  = numpy.std(data, ddof=1, axis = 0)
 
         lower = mean - (t * std/ numpy.sqrt(count))
         upper = mean + (t * std/ numpy.sqrt(count))
+        '''
+
+        n       = data.shape[0]
+
+        mean    = numpy.mean(data, axis = 0)
+        std     = numpy.std(data, axis = 0)
+        se      = stats.sem(data, axis=0)
+        h       = se * stats.t.ppf((1 + confidence) / 2., n-1)
+
+        lower = mean - h
+        upper = mean + h
 
         return mean, std, lower, upper
+
 
     def process_stats(self, iterations, games, total_score, episode_score, file_name):
         per_iteration_score = total_score/iterations[0]

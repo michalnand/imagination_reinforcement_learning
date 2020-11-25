@@ -106,33 +106,14 @@ class AgentDDPGEntropyTrajectoryImagination():
         action_next_t   = self.model_actor_target.forward(state_next_t).detach()
         value_next_t    = self.model_critic_target.forward(state_next_t, action_next_t).detach()
 
+        #intrinsic motivation
+        state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_critic.device, True)
 
-        '''
-        intrinsics motivation
-        '''
-        states_imagined_t =  self._process_imagination(state_t)
+        states_imagined_t =  self._process_imagination(state_seq_t, action_seq_t)
 
-        entropy_t    = self._compute_entropy(states_imagined_t)
-        entropy_t    = torch.tanh(self.entropy_beta*entropy_t)
-        entropy_t    = entropy_t.detach()
-
-
-        state_next_predicted_t = self.model_forward(state_t, action_t)
-
-        loss_forward_   = ((state_next_t.detach() - state_next_predicted_t)**2)
-        loss_forward    = loss_forward_.mean() 
-
-        curiosity_t     = loss_forward_.mean(-1)
-        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
-        curiosity_t     = curiosity_t.detach()
-
-
-        #update forward
-        self.optimizer_forward.zero_grad()
-        loss_forward.backward() 
-        self.optimizer_forward.step()
-
-
+        entropy_t, curiosity_t = self._intrinsic_motivation(states_imagined_t, state_next_seq_t)
+        
+        
         #critic loss
         value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
         value_predicted = self.model_critic.forward(state_t, action_t)
@@ -161,6 +142,15 @@ class AgentDDPGEntropyTrajectoryImagination():
         for target_param, param in zip(self.model_critic_target.parameters(), self.model_critic.parameters()):
             target_param.data.copy_((1.0 - self.tau)*target_param.data + self.tau*param.data)
 
+        #train forward model
+        state_next_predicted_t = self.model_forward(state_t, action_t)
+
+        loss_forward    = ((state_next_t.detach() - state_next_predicted_t)**2)
+        loss_forward    = loss_forward.mean() 
+
+        self.optimizer_forward.zero_grad()
+        loss_forward.backward() 
+        self.optimizer_forward.step()
 
         '''
         log some stats, using exponential smoothing
@@ -187,18 +177,32 @@ class AgentDDPGEntropyTrajectoryImagination():
     def _compute_entropy(self, x):
         return x.std(dim = 1).mean(dim = 1)
 
-    def _process_imagination(self, initial_states_t):
-        imagined_states_t = torch.zeros((self.trajectory_length, self.batch_size) + self.state_shape).to(initial_states_t.device)
+    def _intrinsic_motivation(self, states_imagined_seq_t, state_seq_t):
+        dif     = state_seq_t - states_imagined_seq_t
 
-        imagined_states_t[0] = initial_states_t.clone()
+        entropy_t   = torch.std(dif, dim = 1).mean(dim = 1)
+        curiosity_t = (dif**2).view(dif.size(0), -1).mean(dim=1)
+
+        entropy_t       = torch.tanh(self.entropy_beta*entropy_t).detach()
+        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t).detach()
+
+
+        return entropy_t, curiosity_t
+
+    def _process_imagination(self, state_seq_t, action_seq_t):
+        state_seq_t_    = state_seq_t.transpose(0, 1)
+        action_seq_t_   = action_seq_t.transpose(0, 1)
+
+        states_imagined_seq_t = torch.zeros((self.trajectory_length, self.batch_size) + self.state_shape).to(state_seq_t.device)
+
+        states_imagined_seq_t[0] = state_seq_t_[0].clone()
 
         for n in range(self.trajectory_length - 1):
-            action_t,   _           = self._sample_action(imagined_states_t[n], self.epsilon)
-            imagined_states_t[n+1]  = self.model_forward(imagined_states_t[n], action_t)
+            states_imagined_seq_t[n+1]  = self.model_forward(states_imagined_seq_t[n], action_seq_t_[n])
 
-        imagined_states_t = imagined_states_t.transpose(0, 1)
+        states_imagined_seq_t = states_imagined_seq_t.transpose(0, 1)
 
-        return imagined_states_t
+        return states_imagined_seq_t
 
     def save(self, save_path):
         self.model_actor.save(save_path)
