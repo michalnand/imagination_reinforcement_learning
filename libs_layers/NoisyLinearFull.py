@@ -18,7 +18,7 @@ class NoisyLinearFull(torch.nn.Module):
         self.weight_noise  = nn.Parameter(torch.zeros(in_features, out_features))
         torch.nn.init.xavier_uniform_(self.weight_noise)
 
-        self.bias_noise  = nn.Parameter(torch.randn(out_features)) 
+        self.bias_noise  = nn.Parameter((0.1/out_features)*torch.randn(out_features)) 
  
 
     def forward(self, x): 
