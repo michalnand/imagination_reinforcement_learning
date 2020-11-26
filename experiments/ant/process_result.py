@@ -11,12 +11,18 @@ files = []
 files.append("./models/ddpg_baseline/run_0/result/result.log")
 files.append("./models/ddpg_baseline/run_1/result/result.log")
 files.append("./models/ddpg_baseline/run_2/result/result.log")
+files.append("./models/ddpg_baseline/run_3/result/result.log")
+files.append("./models/ddpg_baseline/run_4/result/result.log")
+files.append("./models/ddpg_baseline/run_5/result/result.log")
+files.append("./models/ddpg_baseline/run_6/result/result.log")
+files.append("./models/ddpg_baseline/run_7/result/result.log")
 rl_stats_compute_ddpg = RLStatsCompute(files, result_path + "ddpg_baseline.log")
 
 
 
 files = []
 files.append("./models/ddpg_entropy_trajectory/run_0/result/result.log")
+files.append("./models/ddpg_entropy_trajectory/run_1/result/result.log")
 rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_entropy_trajectory.log") 
 
 
