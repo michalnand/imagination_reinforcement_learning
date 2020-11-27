@@ -14,22 +14,21 @@ import models.ddpg_baseline.model.src.model_critic     as ModelCritic
 import models.ddpg_baseline.model.src.model_actor      as ModelActor
 import models.ddpg_baseline.model.src.config           as Config
 
-path = "models/ddpg_baseline/model/"
+path = "models/ddpg_baseline/run_2/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
-#env.render()
+env.render()
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
 
 max_iterations = 6*(10**6)
-trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
-trainig.run()
+#trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
+#trainig.run()
 
-'''
+
 agent.load(path)
 agent.disable_training()
 while True:
     reward, done = agent.main()
     env.render()
     time.sleep(0.01)
-'''
