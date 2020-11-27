@@ -174,9 +174,7 @@ class AgentDDPGEntropyTrajectoryImagination():
 
         return action_t, action_np
 
-    def _compute_entropy(self, x):
-        return x.std(dim = 1).mean(dim = 1)
-
+   
     def _intrinsic_motivation(self, states_imagined_seq_t, state_seq_t):
         dif     = state_seq_t - states_imagined_seq_t
 

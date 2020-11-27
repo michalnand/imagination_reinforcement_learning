@@ -69,10 +69,13 @@ class ExperienceBuffer():
         state_next_t    = torch.zeros(state_shape,  dtype=torch.float32).to(device)
         done_t          = torch.zeros(done_shape,  dtype=torch.float32).to(device)
 
-        indices = self.find_indices_random(batch_size)
+
+        self.indices = []
+        for i in range(batch_size):
+            self.indices.append(numpy.random.randint(self.length() - 1))
 
         for j in range(batch_size): 
-            n = indices[j]
+            n = self.indices[j]
 
             state_t[j]         = torch.from_numpy(self.state_b[n]).to(device)
             action_t[j]        = self.action_b[n]
@@ -86,9 +89,29 @@ class ExperienceBuffer():
         
         return state_t.detach(), action_t, reward_t.detach(), state_next_t.detach(), done_t.detach()
 
-    def find_indices_random(self, count):
-        indices = numpy.zeros(count, dtype=int)
-        for i in range(count):
-            indices[i]  = numpy.random.randint(self.length() - 1)
+    
+    def sample_sequence(self, batch_size, sequence_length, device, use_indices = False):
+        state_shape     = (batch_size, sequence_length) + self.state_b[0].shape[0:]
+        action_shape    = (batch_size, sequence_length)
         
-        return indices
+        state_t         = torch.zeros(state_shape,  dtype=torch.float32)
+        action_t        = torch.zeros(action_shape,  dtype=int)
+        state_next_t    = torch.zeros(state_shape,  dtype=torch.float32)
+
+        for b in range(batch_size):
+            if use_indices:
+                n = self.indices[b]
+            else:
+                n  = numpy.random.randint(self.length() - 1 - sequence_length)
+
+            if n < self.length() - 1 - sequence_length:
+                for s in range(sequence_length):
+                    state_t[b][s]      = torch.from_numpy(self.state_b[n + s])
+                    action_t[b][s]     = self.action_b[n + s]
+                    state_next_t[b][s] = torch.from_numpy(self.state_b[n + 1 + s])
+
+        state_t         = state_t.to(device).detach()
+        action_t        = action_t.to(device).detach()
+        state_next_t    = state_next_t.to(device).detach()
+
+        return state_t, action_t, state_next_t
