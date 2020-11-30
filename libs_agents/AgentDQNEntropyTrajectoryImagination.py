@@ -121,7 +121,6 @@ class AgentDQNEntropyTrajectoryImagination():
         '''
         state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_actor.device)
 
-
         #intrinsic motivation
         state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_features.device, True)
 
@@ -129,14 +128,11 @@ class AgentDQNEntropyTrajectoryImagination():
 
         entropy_t, curiosity_t = self._intrinsic_motivation(features_imagined_t, state_next_seq_t)
       
-
-
         '''
         predict features for state and next state
         '''
         features_t          = self.model_features(state_t)
         features_next_t     = self.model_features_target(state_next_t)
-
 
         '''
         predict next features, and compute forward model loss 
@@ -154,7 +150,6 @@ class AgentDQNEntropyTrajectoryImagination():
         q_predicted      = self.model_actor(features_t)
         q_predicted_next = self.model_actor_target(features_next_t)
 
-
         '''
         compute loss for Q values, using Q-learning
         '''
@@ -168,9 +163,6 @@ class AgentDQNEntropyTrajectoryImagination():
         loss_actor  = ((q_target.detach() - q_predicted)**2)
         loss_actor  = loss_actor.mean() 
 
-
-        
-
         '''
         compute final loss, gradients clamp and train
         '''
@@ -181,7 +173,6 @@ class AgentDQNEntropyTrajectoryImagination():
         self.optimizer_forward.zero_grad()
 
         loss.backward() 
-
 
         for param in self.model_features.parameters():
             param.grad.data.clamp_(-10.0, 10.0)
@@ -196,7 +187,6 @@ class AgentDQNEntropyTrajectoryImagination():
         self.optimizer_features.step()
         self.optimizer_actor.step()
         self.optimizer_forward.step()
-
 
         '''
         log some stats, using exponential smoothing
@@ -214,7 +204,6 @@ class AgentDQNEntropyTrajectoryImagination():
 
         batch_size = features_t.shape[0]
 
-        
         q_values_t          = self.model_actor(features_t).to("cpu")
 
         #best actions indices
