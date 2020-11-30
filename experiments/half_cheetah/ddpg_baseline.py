@@ -10,11 +10,11 @@ import libs_agents
 from libs_common.Training import *
 
 
-import models.ddpg_baseline.model.src.model_critic     as ModelCritic
-import models.ddpg_baseline.model.src.model_actor      as ModelActor
-import models.ddpg_baseline.model.src.config           as Config
+import models.ddpg_baseline.run_old.src.model_critic     as ModelCritic
+import models.ddpg_baseline.run_old.src.model_actor      as ModelActor
+import models.ddpg_baseline.run_old.src.config           as Config
 
-path = "models/ddpg_baseline/run_2/"
+path = "models/ddpg_baseline/run_old/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
 env.render()
