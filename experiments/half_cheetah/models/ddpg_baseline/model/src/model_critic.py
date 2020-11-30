@@ -23,7 +23,9 @@ class Model(torch.nn.Module):
         self.model = nn.Sequential(*self.layers) 
         self.model.to(self.device)
 
+        print("model_critic")
         print(self.model)
+        print("\n\n")
        
 
     def forward(self, state, action):

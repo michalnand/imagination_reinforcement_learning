@@ -7,9 +7,7 @@ from .AgentDQNEntropyTrajectoryImagination import *
 from .AgentDQNDuel import *
 
 from .AgentDDPG import *
-from .AgentDDPGImaginationEntropy import *
-from .AgentDDPGEntropyTrajectory import *
-from .AgentDDPGEntropyTrajectoryImagination import *
+from .AgentDDPGImagination import *
 
 from .AgentA2C import *
 from .AgentA2CContinuous import *

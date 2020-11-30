@@ -7,14 +7,14 @@ import libs_agents
 from libs_common.Training import *
 
 
-import models.ddpg_entropy_trajectory_imagination.model.src.model_critic     as ModelCritic
-import models.ddpg_entropy_trajectory_imagination.model.src.model_actor      as ModelActor
-import models.ddpg_entropy_trajectory_imagination.model.src.model_forward    as ModelForward
-import models.ddpg_entropy_trajectory_imagination.model.src.config           as Config
+import models.ddpg_imagination.model.src.model_critic     as ModelCritic
+import models.ddpg_imagination.model.src.model_actor      as ModelActor
+import models.ddpg_imagination.model.src.model_forward    as ModelForward
+import models.ddpg_imagination.model.src.config           as Config
 
 from wrapper import *
 
-path = "models/ddpg_entropy_trajectory_imagination/model/"
+path = "models/ddpg_imagination/model/"
 
 env = env_create(render_eanbled=False)
 
