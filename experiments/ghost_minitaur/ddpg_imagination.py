@@ -18,7 +18,7 @@ path = "models/ddpg_imagination/model/"
 
 env = env_create(render_eanbled=False)
 
-agent = libs_agents.AgentDDPGEntropyTrajectoryImagination(env, ModelCritic, ModelActor, ModelForward, Config)
+agent = libs_agents.AgentDDPGImagination(env, ModelCritic, ModelActor, ModelForward, Config)
 
 max_iterations = 6*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
