@@ -1,16 +1,17 @@
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_0
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_1
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_2
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_3
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_4
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_5
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_6
-python3 ddpg_imagination.py
-cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_7
+#python3 ddpg_entropy_trajectory_imagination.py
+#cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_0
+#python3 ddpg_entropy_trajectory_imagination.py
+#cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_1
+
+python3 ddpg_entropy_trajectory_imagination.py
+cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_2
+python3 ddpg_entropy_trajectory_imagination.py
+cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_3
+python3 ddpg_entropy_trajectory_imagination.py
+cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_4
+python3 ddpg_entropy_trajectory_imagination.py
+cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_5
+python3 ddpg_entropy_trajectory_imagination.py
+cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_6
+python3 ddpg_entropy_trajectory_imagination.py
+cp -r models/ddpg_entropy_trajectory_imagination/model/  models/ddpg_entropy_trajectory_imagination/run_7

@@ -19,9 +19,9 @@ files.append("./models/ddpg_baseline/run_7/result/result.log")
 rl_stats_compute_ddpg = RLStatsCompute(files, result_path + "ddpg_baseline.log")
 
 files = []
-files.append("./models/ddpg_entropy_trajectory_imagination/run_0/result/result.log")
-files.append("./models/ddpg_entropy_trajectory_imagination/run_1/result/result.log")
-rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_entropy_trajectory_imagination.log") 
+files.append("./models/ddpg_imagination/run_0/result/result.log")
+files.append("./models/ddpg_imagination/run_1/result/result.log")
+rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_imagination.log") 
 
 
 
