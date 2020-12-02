@@ -6,9 +6,9 @@ sys.path.insert(0, '../..')
 import libs_agents
 from libs_common.Training import *
 
-import models.ddpg.model.src.model_critic     as ModelCritic
-import models.ddpg.model.src.model_actor      as ModelActor
-import models.ddpg.model.src.config           as Config
+import models.ddpg_baseline.model.src.model_critic     as ModelCritic
+import models.ddpg_baseline.model.src.model_actor      as ModelActor
+import models.ddpg_baseline.model.src.config           as Config
 
 from wrapper import *
 
