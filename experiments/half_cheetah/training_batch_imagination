@@ -1,8 +1,7 @@
-#python3 ddpg_imagination.py
-#cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_0
-#python3 ddpg_imagination.py
-#cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_1
-
+python3 ddpg_imagination.py
+cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_0
+python3 ddpg_imagination.py
+cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_1
 python3 ddpg_imagination.py
 cp -r models/ddpg_imagination/model/  models/ddpg_imagination/run_2
 python3 ddpg_imagination.py
