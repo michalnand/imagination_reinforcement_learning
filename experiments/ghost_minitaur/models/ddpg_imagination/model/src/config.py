@@ -9,7 +9,7 @@ class Config():
         self.batch_size          = 64
         self.update_frequency    = 4
 
-        self.exploration   = libs_common.decay.Const(0.02, 0.02)
+        self.exploration   = libs_common.decay.Const(0.05, 0.05)
 
         self.experience_replay_size = 200000
 

@@ -16,9 +16,9 @@ class Model(torch.nn.Module):
         self.layers = [ 
             nn.Linear(input_shape[0] + outputs_count, hidden_count),
             nn.ReLU(),
-            nn.Linear(hidden_count, hidden_count//2),
+            nn.Linear(hidden_count, hidden_count),
             nn.ReLU(),           
-            nn.Linear(hidden_count//2, input_shape[0])
+            nn.Linear(hidden_count, input_shape[0])
         ]
 
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
@@ -34,7 +34,7 @@ class Model(torch.nn.Module):
        
     def forward(self, state, action):
         x = torch.cat([state, action], dim = 1) 
-        return self.model(x) + state
+        return self.model(x) #+ state
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")
