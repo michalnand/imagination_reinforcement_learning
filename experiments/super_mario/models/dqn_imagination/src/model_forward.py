@@ -63,7 +63,7 @@ class Model(torch.nn.Module):
 
         x = torch.cat([state, action_], dim=1)
 
-        return self.model(x) # + state.detach()
+        return self.model(x) + state.detach()
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")
