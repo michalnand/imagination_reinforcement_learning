@@ -13,20 +13,19 @@ import models.ddpg_baseline.model.src.config           as Config
 from wrapper import *
 
 
-env = env_create(render_eanbled=False)
+env = env_create(render_eanbled=True)
 
-path = "models/ddpg_baseline/model/" 
+path = "models/ddpg_baseline/run_1/" 
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
 
 max_iterations = 6*(10**6)
-trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
-trainig.run()
+#trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
+#trainig.run()
 
-'''
+
 agent.load(path)
 agent.disable_training()
 while True:
     reward, done = agent.main()
     time.sleep(0.01)
-'''
