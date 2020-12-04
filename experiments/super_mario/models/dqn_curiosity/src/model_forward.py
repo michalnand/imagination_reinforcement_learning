@@ -40,7 +40,6 @@ class Model(torch.nn.Module):
             ResidualBlock(128),
             ResidualBlock(128),
             
-
             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
 
@@ -63,7 +62,7 @@ class Model(torch.nn.Module):
 
         x = torch.cat([state, action_], dim=1)
 
-        return self.model(x) + state.detach()
+        return self.model(x) # + state.detach()
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")

@@ -253,7 +253,10 @@ class AgentDQNImagination():
         dif     = features_target_seq_t - features_imagined_seq_t
 
         #compute entropy, variance
-        entropy_t   = torch.std(dif, dim = 1).view(dif.size(0), -1).mean(dim = 1)
+        if self.trajectory_length > 1:
+            entropy_t   = torch.std(dif, dim = 1).view(dif.size(0), -1).mean(dim = 1)
+        else:
+            entropy_t   = torch.zeros(dif.shape).to(dif.device)
 
         #compute curiosity, mean square
         curiosity_t = (dif**2).view(dif.size(0), -1).mean(dim=1)
