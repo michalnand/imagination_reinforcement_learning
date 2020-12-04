@@ -13,11 +13,11 @@ class Config():
         self.experience_replay_size = 32768
  
         self.learning_rate_features = 0.0001
-        self.learning_rate_forward  = 0.0001
+        self.learning_rate_forward  = 0.0002
         self.learning_rate_actor    = 0.0001
 
-        self.imagination_rollouts   = 8
-        self.imagination_steps      = 1
+        
+        self.trajectory_length      = 8
         self.entropy_beta           = 10.0
         self.curiosity_beta         = 10.0
 

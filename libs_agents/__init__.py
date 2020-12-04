@@ -2,9 +2,8 @@ from .AgentRandom import *
 from .AgentRandomContinuous import *
 
 from .AgentDQN import *
-from .AgentDQNImaginationEntropy import *
-from .AgentDQNEntropyTrajectoryImagination import *
 from .AgentDQNDuel import *
+from .AgentDQNImagination import *
 
 from .AgentDDPG import *
 from .AgentDDPGImagination import *

@@ -1,10 +1,6 @@
 import torch
 import torch.nn as nn
 
-class Flatten(nn.Module):
-    def forward(self, input):
-        return input.view(input.size(0), -1)
-
 class ResidualBlock(torch.nn.Module):
     def __init__(self, channels, weight_init_gain = 1.0):
         super(ResidualBlock, self).__init__()
@@ -38,20 +34,22 @@ class Model(torch.nn.Module):
         self.input_shape    = input_shape
                
         self.layers = [ 
-            nn.Conv2d(self.input_shape[0] + outputs_count, 128, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(self.input_shape[0] + outputs_count, 128, kernel_size=1, stride=1, padding=0),
             nn.ReLU(),
 
             ResidualBlock(128),
             ResidualBlock(128),
- 
-            nn.Conv2d(128, self.input_shape[0], kernel_size=3, stride=1, padding=1)
+            
+
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+
+            nn.Conv2d(128, self.input_shape[0], kernel_size=1, stride=1, padding=0),
         ] 
 
-      
         for i in range(len(self.layers)):
             if hasattr(self.layers[i], "weight"):
                 torch.nn.init.xavier_uniform_(self.layers[i].weight)
-
 
         self.model = nn.Sequential(*self.layers)
         self.model.to(self.device)
@@ -65,7 +63,7 @@ class Model(torch.nn.Module):
 
         x = torch.cat([state, action_], dim=1)
 
-        return self.model(x)
+        return self.model(x) + state.detach()
 
     def save(self, path):
         torch.save(self.model.state_dict(), path + "trained/model_forward.pt")

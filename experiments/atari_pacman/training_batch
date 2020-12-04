@@ -1,1 +1,1 @@
-python3 dqn_entropy_trajectory_imagination.py
+python3 dqn_imagination.py
