@@ -29,21 +29,33 @@ class Model(torch.nn.Module):
     def __init__(self, input_shape, outputs_count):
         super(Model, self).__init__()
 
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.input_shape    = input_shape
-               
+        self.outputs_count  = outputs_count
+        
+        input_channels  = self.input_shape[0]
+        input_height    = self.input_shape[1]
+        input_width     = self.input_shape[2]    
+
+  
         self.layers = [ 
-            nn.Conv2d(self.input_shape[0] + outputs_count, 128, kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(input_channels + outputs_count, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
 
+            ResidualBlock(128),
             ResidualBlock(128),
             ResidualBlock(128),
             
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.ReLU(),
 
-            nn.Conv2d(128, self.input_shape[0], kernel_size=1, stride=1, padding=0),
+            nn.Conv2d(64, self.input_shape[0], kernel_size=1, stride=1, padding=0)
         ] 
 
         for i in range(len(self.layers)):
@@ -74,9 +86,9 @@ class Model(torch.nn.Module):
 if __name__ == "__main__":
     batch_size = 8
 
-    channels = 128
-    height   = 6
-    width    = 6
+    channels = 3
+    height   = 96
+    width    = 96
 
     actions_count = 9
 

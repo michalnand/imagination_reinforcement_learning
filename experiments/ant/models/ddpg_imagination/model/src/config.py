@@ -20,6 +20,6 @@ class Config():
         self.learning_rate_actor    = 0.0001 
       
 
-        self.trajectory_length      = 16
-        self.entropy_beta           = 1.0
-        self.curiosity_beta         = 1.0
+        self.rollouts               = 16
+        self.entropy_beta           = 10.0
+        self.curiosity_beta         = 10.0

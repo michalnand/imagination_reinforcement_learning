@@ -4,7 +4,7 @@ from .ExperienceBuffer import *
 
 
 class AgentDQNImagination():
-    def __init__(self, env, ModelFeatures, ModelActor, ModelForward, Config):
+    def __init__(self, env, Modeldqn, ModelForward, Config):
         self.env    = env
         config      = Config.Config()
 
@@ -24,23 +24,14 @@ class AgentDQNImagination():
 
         self.experience_replay  = ExperienceBuffer(config.experience_replay_size)
 
-        self.model_features             = ModelFeatures.Model(self.state_shape)
-        self.model_features_target      = ModelFeatures.Model(self.state_shape)
-        for target_param, param in zip(self.model_features_target.parameters(), self.model_features.parameters()):
+        self.model_dqn             = Modeldqn.Model(self.state_shape, self.actions_count)
+        self.model_dqn_target      = Modeldqn.Model(self.state_shape, self.actions_count)
+        for target_param, param in zip(self.model_dqn_target.parameters(), self.model_dqn.parameters()):
             target_param.data.copy_(param.data)
 
-        self.features_shape          = self.model_features.features_shape
+        self.model_forward      = ModelForward.Model(self.state_shape,    self.actions_count)
 
-        self.model_actor             = ModelActor.Model(self.features_shape, self.actions_count)
-        self.model_actor_target      = ModelActor.Model(self.features_shape, self.actions_count)
-        for target_param, param in zip(self.model_actor_target.parameters(), self.model_actor.parameters()):
-            target_param.data.copy_(param.data)
-
-
-        self.model_forward      = ModelForward.Model(self.features_shape,    self.actions_count)
-
-        self.optimizer_features = torch.optim.Adam(self.model_features.parameters(),    lr=config.learning_rate_features)
-        self.optimizer_actor    = torch.optim.Adam(self.model_actor.parameters(),       lr=config.learning_rate_actor)
+        self.optimizer_dqn    = torch.optim.Adam(self.model_dqn.parameters(),       lr=config.learning_rate_dqn)
         self.optimizer_forward  = torch.optim.Adam(self.model_forward.parameters(),     lr=config.learning_rate_forward)
         
        
@@ -49,7 +40,7 @@ class AgentDQNImagination():
         self.enable_training()
 
 
-        self.loss_actor     = 0.0
+        self.loss_dqn     = 0.0
         self.loss_forward   = 0.0
         self.entropy        = 0.0
         self.curiosity      = 0.0
@@ -69,11 +60,9 @@ class AgentDQNImagination():
         else:
             self.epsilon = self.exploration.get_testing()
              
-        state_t     = torch.from_numpy(self.state).to(self.model_actor.device).unsqueeze(0).float()
-
-        features    = self.model_features(state_t)
+        state_t     = torch.from_numpy(self.state).to(self.model_dqn.device).unsqueeze(0).float()
         
-        action_idx_np, action_one_hot,  = self._sample_action(features, self.epsilon)
+        action_idx_np, action_one_hot,  = self._sample_action(state_t, self.epsilon)
 
         action = action_idx_np[0]
 
@@ -87,8 +76,7 @@ class AgentDQNImagination():
                 self._training()
  
             if self.iterations%self.target_update == 0:
-                self.model_features_target.load_state_dict(self.model_features.state_dict())
-                self.model_actor_target.load_state_dict(self.model_actor.state_dict())
+                self.model_dqn_target.load_state_dict(self.model_dqn.state_dict())
 
         if done:
             self.state = self.env.reset()
@@ -119,36 +107,35 @@ class AgentDQNImagination():
         '''
         sample random minibatch
         '''
-        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_actor.device)
+        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_dqn.device)
 
         #intrinsic motivation
-        state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_features.device, True)
+        state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_forward.device, True)
 
-        features_imagined_t    =  self._process_imagination(state_t, action_seq_t)
+        states_imagined_t    =  self._process_imagination(state_t, action_seq_t)
 
-        entropy_t, curiosity_t = self._intrinsic_motivation(features_imagined_t, state_next_seq_t)
+        entropy_t, curiosity_t = self._intrinsic_motivation(states_imagined_t, state_next_seq_t)
+      
       
         '''
-        predict features for state and next state
-        '''
-        features_t          = self.model_features(state_t)
-        features_next_t     = self.model_features_target(state_next_t)
-
-        '''
-        predict next features, and compute forward model loss 
+        predict next state, and compute forward model loss 
         note : forward model learns next features
         '''
-        action_one_hot_t        = self._action_one_hot(action_t)
-        features_predicted_t    = self.model_forward(features_t, action_one_hot_t)
+        action_one_hot_t    = self._action_one_hot(action_t)
+        state_predicted     = self.model_forward(state_t, action_one_hot_t)
 
-        loss_forward   = ((features_next_t.detach() - features_predicted_t)**2)
+        loss_forward   = ((state_next_t.detach() - state_predicted)**2)
         loss_forward   = loss_forward.mean() 
 
+        self.optimizer_forward.zero_grad()
+        loss_forward.backward() 
+        self.optimizer_forward.step()
+
         '''
-        predict Q-values using features, and actor model
+        predict Q-values using features, and dqn model
         '''
-        q_predicted      = self.model_actor(features_t)
-        q_predicted_next = self.model_actor_target(features_next_t)
+        q_predicted      = self.model_dqn(state_t)
+        q_predicted_next = self.model_dqn_target(state_next_t)
 
         '''
         compute loss for Q values, using Q-learning
@@ -159,34 +146,19 @@ class AgentDQNImagination():
             action_idx              = action_t[j]
             q_target[j][action_idx] = entropy_t[j] + curiosity_t[j] + reward_t[j] + self.gamma*torch.max(q_predicted_next[j])*(1- done_t[j])
  
-        #compute loss
-        loss_actor  = ((q_target.detach() - q_predicted)**2)
-        loss_actor  = loss_actor.mean() 
+        #compute dqn loss
+        loss_dqn  = ((q_target.detach() - q_predicted)**2)
+        loss_dqn  = loss_dqn.mean() 
 
-        '''
-        compute final loss, gradients clamp and train
-        '''
-        loss = loss_actor + loss_forward
-
-        self.optimizer_features.zero_grad()
-        self.optimizer_actor.zero_grad()
-        self.optimizer_forward.zero_grad()
-
-        loss.backward() 
-
-        for param in self.model_features.parameters():
-            param.grad.data.clamp_(-10.0, 10.0)
-
-        for param in self.model_actor.parameters():
-            param.grad.data.clamp_(-10.0, 10.0)
+        #train dqn
+        self.optimizer_dqn.zero_grad()
         
-        for param in self.model_forward.parameters():
+        loss_dqn.backward() 
+        for param in self.model_dqn.parameters():
             param.grad.data.clamp_(-10.0, 10.0)
-        
 
-        self.optimizer_features.step()
-        self.optimizer_actor.step()
-        self.optimizer_forward.step()
+        self.optimizer_dqn.step()
+
 
         '''
         log some stats, using exponential smoothing
@@ -194,17 +166,17 @@ class AgentDQNImagination():
         k = 0.02
 
         self.loss_forward   = (1.0 - k)*self.loss_forward   + k*loss_forward.detach().to("cpu").numpy()
-        self.loss_actor     = (1.0 - k)*self.loss_actor     + k*loss_actor.detach().to("cpu").numpy()
+        self.loss_dqn       = (1.0 - k)*self.loss_dqn     + k*loss_dqn.detach().to("cpu").numpy()
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        print(self.loss_forward, self.loss_actor, self.entropy, self.curiosity, "\n\n")
+        #print(self.loss_forward, self.loss_dqn, self.entropy, self.curiosity, "\n\n")
 
-    def _sample_action(self, features_t, epsilon):
+    def _sample_action(self, state_t, epsilon):
 
-        batch_size = features_t.shape[0]
+        batch_size = state_t.shape[0]
 
-        q_values_t          = self.model_actor(features_t).to("cpu")
+        q_values_t          = self.model_dqn(state_t).to("cpu")
 
         #best actions indices
         q_max_indices_t     = torch.argmax(q_values_t, dim = 1)
@@ -234,29 +206,19 @@ class AgentDQNImagination():
 
         action_one_hot_t = torch.zeros((batch_size, self.actions_count))
         action_one_hot_t[range(batch_size), action_idx_t] = 1.0  
-        action_one_hot_t = action_one_hot_t.to(self.model_actor.device)
+        action_one_hot_t = action_one_hot_t.to(self.model_dqn.device)
 
         return action_one_hot_t
 
-    def _intrinsic_motivation(self, features_imagined_seq_t, state_target_seq_t):
-
-        #reshape state to one huge batch
-        shape   = (self.batch_size*self.trajectory_length,  ) + self.state_shape
-        x       = torch.reshape(state_target_seq_t, (self.batch_size*self.trajectory_length,  ) + self.state_shape)
-
-        #obtain target features
-        features_target_seq_t = self.model_features(x)
-
-        features_target_seq_t = torch.reshape(features_target_seq_t, (self.batch_size, self.trajectory_length,  ) + self.features_shape)
-
+    def _intrinsic_motivation(self, states_imagined_t, state_target_seq_t):
         #difference : target and predicted
-        dif     = features_target_seq_t - features_imagined_seq_t
+        dif     = state_target_seq_t - states_imagined_t
 
         #compute entropy, variance
         if self.trajectory_length > 1:
             entropy_t   = torch.std(dif, dim = 1).view(dif.size(0), -1).mean(dim = 1)
         else:
-            entropy_t   = torch.zeros(dif.shape).to(dif.device)
+            entropy_t   = torch.zeros((self.batch_size, self.trajectory_length)).to(dif.device)
 
         #compute curiosity, mean square
         curiosity_t = (dif**2).view(dif.size(0), -1).mean(dim=1)
@@ -271,35 +233,32 @@ class AgentDQNImagination():
     def _process_imagination(self, state_initial_t, action_seq_t):
         action_seq_t_           = action_seq_t.transpose(0, 1)
 
-        features_imagined_seq_t = torch.zeros((self.trajectory_length, self.batch_size) + self.features_shape).to(state_initial_t.device)
+        states_imagined_seq_t = torch.zeros((self.trajectory_length, self.batch_size) + self.state_shape).to(state_initial_t.device)
 
-        features_imagined_seq_t[0] = self.model_features(state_initial_t).detach()
+        states_imagined_seq_t[0] = state_initial_t.detach().clone()
 
         for n in range(self.trajectory_length - 1):
             action_one_hot_t              = self._action_one_hot(action_seq_t_[n])
-            features_imagined_seq_t[n+1]  = self.model_forward(features_imagined_seq_t[n], action_one_hot_t)
+            states_imagined_seq_t[n+1]  = self.model_forward(states_imagined_seq_t[n], action_one_hot_t)
 
-        features_imagined_seq_t = features_imagined_seq_t.transpose(0, 1)
+        states_imagined_seq_t = states_imagined_seq_t.transpose(0, 1)
 
-        return features_imagined_seq_t
+        return states_imagined_seq_t
 
     def save(self, save_path):
-        self.model_features.save(save_path)
         self.model_forward.save(save_path)
-        self.model_actor.save(save_path)
+        self.model_dqn.save(save_path)
 
     def load(self, load_path):
-        self.model_features.load(load_path)
         self.model_forward.load(load_path)
-        self.model_actor.load(load_path)
+        self.model_dqn.load(load_path)
 
     def get_log(self):
         result = "" 
         result+= str(round(self.loss_forward, 7)) + " "
-        result+= str(round(self.loss_actor, 7)) + " "
+        result+= str(round(self.loss_dqn, 7)) + " "
         result+= str(round(self.entropy, 7)) + " "
         result+= str(round(self.curiosity, 7)) + " "
-        result+= str(round(self.entropy, 7)) + " "
-        result+= str(round(self.curiosity, 7)) + " "
+
 
         return result

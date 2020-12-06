@@ -18,9 +18,9 @@ class AgentDDPGImagination():
 
         self.exploration    = config.exploration
 
-        self.trajectory_length      = config.trajectory_length
-        self.entropy_beta           = config.entropy_beta
-        self.curiosity_beta         = config.curiosity_beta
+        self.rollouts           = config.rollouts
+        self.entropy_beta       = config.entropy_beta
+        self.curiosity_beta     = config.curiosity_beta
 
     
         self.state_shape    = self.env.observation_space.shape
@@ -100,20 +100,19 @@ class AgentDDPGImagination():
     def train_model(self):
         state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_critic.device)
         
+
+        #intrinsic motivation
+
+        curiosity_t = self._curiosity(state_t, state_next_t, action_t).detach()
+        entropy_t   = self._entropy(state_t, self.epsilon).detach()
+      
+
         reward_t = reward_t.unsqueeze(-1)
         done_t   = (1.0 - done_t).unsqueeze(-1)
 
         action_next_t   = self.model_actor_target.forward(state_next_t).detach()
         value_next_t    = self.model_critic_target.forward(state_next_t, action_next_t).detach()
 
-        #intrinsic motivation
-        state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_critic.device, True)
-
-        states_imagined_t =  self._process_imagination(state_seq_t, action_seq_t)
-
-        entropy_t, curiosity_t = self._intrinsic_motivation(states_imagined_t, state_next_seq_t)
-        
-        
         #critic loss
         value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
         value_predicted = self.model_critic.forward(state_t, action_t)
@@ -165,8 +164,8 @@ class AgentDDPGImagination():
 
         #print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
-    def _sample_action(self, features_t, epsilon):
-        action_t    = self.model_actor(features_t)
+    def _sample_action(self, state_t, epsilon):
+        action_t    = self.model_actor(state_t)
         action_t    = action_t + epsilon*torch.randn(action_t.shape).to(self.model_actor.device)
         action_t    = action_t.clamp(-1.0, 1.0)
 
@@ -174,34 +173,47 @@ class AgentDDPGImagination():
 
         return action_t, action_np
 
-   
-    def _intrinsic_motivation(self, states_imagined_seq_t, state_seq_t):
-        dif     = state_seq_t - states_imagined_seq_t
 
-        entropy_t   = torch.std(dif, dim = 1).mean(dim = 1)
-        curiosity_t = (dif**2).view(dif.size(0), -1).mean(dim=1)
+    def _curiosity(self, state_t, state_next_t, action_t):
+        state_predicted_t = self.model_forward(state_t, action_t)
 
-        entropy_t       = torch.tanh(self.entropy_beta*entropy_t).detach()
-        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t).detach()
+        dif             = state_next_t - state_predicted_t
+        curiosity_t     = (dif**2).view(dif.size(0), -1).mean(dim=1)
+        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
+
+        return curiosity_t
 
 
-        return entropy_t, curiosity_t
+    def _entropy(self, state_t, epsilon):
 
-    def _process_imagination(self, state_seq_t, action_seq_t):
-        state_seq_t_    = state_seq_t.transpose(0, 1)
-        action_seq_t_   = action_seq_t.transpose(0, 1)
+        states_initial_t  = torch.zeros((self.rollouts, self.batch_size) + self.state_shape).to(state_t.device)
 
-        states_imagined_seq_t = torch.zeros((self.trajectory_length, self.batch_size) + self.state_shape).to(state_seq_t.device)
+        #fill initial state
+        for i in range(self.rollouts):
+            states_initial_t[i] = state_t.clone()
 
-        states_imagined_seq_t[0] = state_seq_t_[0].clone()
+        #create one big batch for faster run
+        states_initial_t = states_initial_t.reshape((self.rollouts*self.batch_size, ) + self.state_shape)
 
-        for n in range(self.trajectory_length - 1):
-            states_imagined_seq_t[n+1]  = self.model_forward(states_imagined_seq_t[n], action_seq_t_[n])
+        #sample actions
+        actions_t, _ = self._sample_action(states_initial_t, epsilon)
 
-        states_imagined_seq_t = states_imagined_seq_t.transpose(0, 1)
+        #compute predicted state
+        state_predicted_t = self.model_forward(states_initial_t, actions_t)
 
-        return states_imagined_seq_t
+        #reshape back, to batch, rollouts, state.shape
+        state_predicted_t = state_predicted_t.reshape((self.rollouts, self.batch_size, ) + self.state_shape)
+        state_predicted_t = state_predicted_t.transpose(0, 1)
 
+        #compute entropy from variance, accross rollout dimension
+        entropy_t   = torch.std(state_predicted_t, dim = 1).mean(dim = 1)
+
+        entropy_t       = torch.tanh(self.entropy_beta*entropy_t)
+
+        return entropy_t
+
+ 
+  
     def save(self, save_path):
         self.model_actor.save(save_path)
         self.model_critic.save(save_path)
