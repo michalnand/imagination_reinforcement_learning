@@ -162,7 +162,7 @@ class AgentDDPGImagination():
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        #print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
+        print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
     def _sample_action(self, state_t, epsilon):
         action_t    = self.model_actor(state_t)
@@ -186,17 +186,21 @@ class AgentDDPGImagination():
 
     def _entropy(self, state_t, epsilon):
 
-        states_initial_t  = torch.zeros((self.rollouts, self.batch_size) + self.state_shape).to(state_t.device)
-
         #fill initial state
+        states_initial_t  = torch.zeros((self.rollouts, self.batch_size) + self.state_shape).to(state_t.device)
         for i in range(self.rollouts):
             states_initial_t[i] = state_t.clone()
+
+        #sample actions
+        actions_t  = torch.zeros((self.rollouts, self.batch_size, self.actions_count)).to(state_t.device)
+        for i in range(self.rollouts):
+            actions_t_, _ = self._sample_action(state_t, epsilon)
+            actions_t[i]  = actions_t_.clone()
 
         #create one big batch for faster run
         states_initial_t = states_initial_t.reshape((self.rollouts*self.batch_size, ) + self.state_shape)
 
-        #sample actions
-        actions_t, _ = self._sample_action(states_initial_t, epsilon)
+        actions_t = actions_t.reshape((self.rollouts*self.batch_size, self.actions_count))
 
         #compute predicted state
         state_predicted_t = self.model_forward(states_initial_t, actions_t)
