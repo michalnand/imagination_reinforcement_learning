@@ -20,13 +20,6 @@ rl_stats_compute_ddpg = RLStatsCompute(files, result_path + "ddpg_baseline.log")
 
 files = []
 files.append("./models/ddpg_imagination/run_0/result/result.log")
-files.append("./models/ddpg_imagination/run_1/result/result.log")
-files.append("./models/ddpg_imagination/run_2/result/result.log")
-files.append("./models/ddpg_imagination/run_3/result/result.log")
-files.append("./models/ddpg_imagination/run_4/result/result.log")
-files.append("./models/ddpg_imagination/run_5/result/result.log")
-files.append("./models/ddpg_imagination/run_6/result/result.log")
-files.append("./models/ddpg_imagination/run_7/result/result.log")
 rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_imagination.log") 
 
 
