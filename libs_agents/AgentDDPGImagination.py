@@ -162,7 +162,7 @@ class AgentDDPGImagination():
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
+        #print(self.loss_forward, self.loss_actor, self.loss_critic, self.entropy, self.curiosity, "\n\n")
 
     def _sample_action(self, state_t, epsilon):
         action_t    = self.model_actor(state_t)
@@ -209,6 +209,7 @@ class AgentDDPGImagination():
         #reshape back, to batch, rollouts, state.shape
         state_predicted_t = state_predicted_t.reshape((self.rollouts, self.batch_size, ) + self.state_shape)
         state_predicted_t = state_predicted_t.transpose(0, 1)
+        state_predicted_t = state_predicted_t.view(state_predicted_t.size(0), state_predicted_t.size(1), -1)
 
         #compute entropy from variance, accross rollout dimension
         entropy_t   = torch.std(state_predicted_t, dim = 1).mean(dim = 1)
