@@ -17,7 +17,7 @@ import models.ddpg_baseline.model.src.config           as Config
 path = "models/ddpg_baseline/model/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
-#env.render()
+env.render()
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
 

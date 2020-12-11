@@ -15,7 +15,7 @@ import models.ddpg_imagination.model.src.model_actor      as ModelActor
 import models.ddpg_imagination.model.src.model_forward    as ModelForward
 import models.ddpg_imagination.model.src.config           as Config
 
-path = "models/ddpg_imagination/run_0/"
+path = "models/ddpg_imagination/model/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
 env.render()
@@ -25,7 +25,6 @@ agent = libs_agents.AgentDDPGImagination(env, ModelCritic, ModelActor, ModelForw
 max_iterations = 4*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
 trainig.run()
-
 
 '''
 agent.load(path)

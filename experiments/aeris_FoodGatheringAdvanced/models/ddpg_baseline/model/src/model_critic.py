@@ -6,64 +6,68 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, kernels_count = 32, hidden_count = 256):
+    def __init__(self, input_shape, outputs_count, kernels_count = 64, hidden_count = 256):
         super(Model, self).__init__()
 
-        #self.device = "cpu"
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = "cpu"
+        #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.channels   = input_shape[0]
         self.width      = input_shape[1]
 
         fc_count        = kernels_count*self.width//4
 
-        self.layers_features = [ 
-            nn.Conv1d(self.channels, kernels_count, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(kernels_count, kernels_count, kernel_size=3, stride=2, padding=1),
+        self.layers = [ 
+            nn.Conv1d(self.channels + outputs_count, kernels_count, kernel_size=8, stride=4, padding=2),
             nn.ReLU(),
 
-            Flatten()
-        ]
+            Flatten(),
 
-        self.layers_output = [ 
-            nn.Linear(fc_count + outputs_count, hidden_count),
+            nn.Linear(fc_count, hidden_count),
             nn.ReLU(),            
             nn.Linear(hidden_count, 1)           
         ] 
 
-        torch.nn.init.xavier_uniform_(self.layers_features[0].weight)
-        torch.nn.init.xavier_uniform_(self.layers_features[2].weight)
-
-        torch.nn.init.xavier_uniform_(self.layers_output[0].weight)
-        torch.nn.init.uniform_(self.layers_output[2].weight, -0.003, 0.003)
+       
+        torch.nn.init.xavier_uniform_(self.layers[0].weight)
+        torch.nn.init.xavier_uniform_(self.layers[3].weight)
+        torch.nn.init.uniform_(self.layers[5].weight, -0.003, 0.003)
  
-        self.model_features = nn.Sequential(*self.layers_features) 
-        self.model_features.to(self.device)
-
-        self.model_output = nn.Sequential(*self.layers_output) 
-        self.model_output.to(self.device)
+        self.model = nn.Sequential(*self.layers) 
+        self.model.to(self.device)
 
         print("model_critic")
-        print(self.model_features)
-        print(self.model_output)
+        print(self.model)
         print("\n\n")
        
 
     def forward(self, state, action):
-        features = self.model_features(state)
-        x        = torch.cat([features, action], dim = 1)
-        
-        return self.model_output(x)
+        a_  = action.unsqueeze(2).repeat(1, 1, state.shape[2])
+        x   = torch.cat([state, a_], dim = 1) 
+      
+        return self.model(x)
 
     def save(self, path):
         print("saving to ", path)
-        torch.save(self.model_features.state_dict(), path + "trained/model_critic_features.pt")
-        torch.save(self.model_output.state_dict(), path + "trained/model_critic_output.pt")
+        torch.save(self.model.state_dict(), path + "trained/model_critic.pt")
 
     def load(self, path):       
         print("loading from ", path)
-        self.model_features.load_state_dict(torch.load(path + "trained/model_critic_features.pt", map_location = self.device))
-        self.model_output.load_state_dict(torch.load(path + "trained/model_critic_output.pt", map_location = self.device))
-        self.model_features.eval()  
-        self.model_output.eval()  
+        self.model.load_state_dict(torch.load(path + "trained/model_critic.pt", map_location = self.device))
+        self.model.eval()  
+
+
+
+if __name__ == "__main__":
+    batch_size      = 1
+    input_shape     = (6, 32)
+    outputs_count   = 5
+
+    model = Model(input_shape, outputs_count)
+
+    state   = torch.randn((batch_size, ) + input_shape)
+    action  = torch.randn((batch_size, outputs_count))
+
+    y = model.forward(state, action)
+
+    print(y.shape)
