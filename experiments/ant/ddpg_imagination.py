@@ -15,7 +15,7 @@ import models.ddpg_imagination.model.src.model_actor      as ModelActor
 import models.ddpg_imagination.model.src.model_forward    as ModelForward
 import models.ddpg_imagination.model.src.config           as Config
 
-path = "models/ddpg_imagination/run_0/"
+path = "models/ddpg_imagination/model/"
 
 env = pybullet_envs.make("AntBulletEnv-v0")
 env.render()
