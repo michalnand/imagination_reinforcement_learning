@@ -17,11 +17,11 @@ import models.ddpg_baseline.model.src.config           as Config
 path = "models/ddpg_baseline/model/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
-env.render()
+#env.render()
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
-
-max_iterations = 4*(10**6)
+ 
+max_iterations = 6*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
 trainig.run()
 

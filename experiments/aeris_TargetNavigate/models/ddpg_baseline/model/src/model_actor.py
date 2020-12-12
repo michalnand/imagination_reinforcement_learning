@@ -11,7 +11,7 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, kernels_count = 64, hidden_count = 256):
+    def __init__(self, input_shape, outputs_count, hidden_count = 512):
         super(Model, self).__init__()
 
         self.device = "cpu"
@@ -20,23 +20,20 @@ class Model(torch.nn.Module):
         self.channels   = input_shape[0]
         self.width      = input_shape[1]
 
-        fc_count        = kernels_count*self.width//4
-
         self.layers = [ 
-            nn.Conv1d(self.channels, kernels_count, kernel_size=8, stride=4, padding=2),
+            nn.Linear(self.channels*self.width, hidden_count),
             nn.ReLU(),
 
-            Flatten(),
+            libs_layers.NoisyLinearFull(hidden_count, hidden_count//2),
+            nn.ReLU(),
 
-            libs_layers.NoisyLinearFull(fc_count, hidden_count),
-            nn.ReLU(),            
-            libs_layers.NoisyLinearFull(hidden_count, outputs_count),
+            libs_layers.NoisyLinearFull(hidden_count//2, outputs_count),
             nn.Tanh()
         ]
 
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
-        torch.nn.init.xavier_uniform_(self.layers[3].weight)
-        torch.nn.init.uniform_(self.layers[5].weight, -0.3, 0.3)
+        torch.nn.init.xavier_uniform_(self.layers[2].weight)
+        torch.nn.init.uniform_(self.layers[4].weight, -0.3, 0.3)
 
         self.model = nn.Sequential(*self.layers)
         self.model.to(self.device)
@@ -47,7 +44,9 @@ class Model(torch.nn.Module):
        
 
     def forward(self, state):
-        return self.model(state)
+        x = state.view(state.size(0), -1)
+
+        return self.model(x)
 
      
     def save(self, path):

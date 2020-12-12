@@ -20,7 +20,7 @@ env = gym.make("TargetNavigate-v0", render = False)
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
 
-max_iterations = 6*(10**6)
+max_iterations = 2*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
 trainig.run()
 
