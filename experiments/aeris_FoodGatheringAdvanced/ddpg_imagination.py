@@ -21,7 +21,7 @@ env = gym.make("FoodGatheringAdvanced-v0", render = False)
 
 agent = libs_agents.AgentDDPGImagination(env, ModelCritic, ModelActor, ModelForward, Config)
 
-max_iterations = 6*(10**6)
+max_iterations = 4*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
 trainig.run()
 

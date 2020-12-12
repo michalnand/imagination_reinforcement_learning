@@ -18,7 +18,7 @@ import models.ddpg_imagination.model.src.config           as Config
 path = "models/ddpg_imagination/model/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
-env.render()
+#env.render()
 
 agent = libs_agents.AgentDDPGImagination(env, ModelCritic, ModelActor, ModelForward, Config)
 

@@ -16,18 +16,17 @@ import models.ddpg_baseline.model.src.config           as Config
 
 path = "models/ddpg_baseline/model/"
 
-env = gym.make("FoodGatheringAdvanced-v0", render = False)
+env = gym.make("FoodGatheringAdvanced-v0", render = True)
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
 
-max_iterations = 6*(10**6)
-trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
-trainig.run()
+max_iterations = 4*(10**6)
+#trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
+#trainig.run()
 
-'''
+
 agent.load(path)
 agent.disable_training()
 while True:
     reward, done = agent.main()
     time.sleep(0.01)
-'''
