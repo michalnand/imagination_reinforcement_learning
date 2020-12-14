@@ -5,28 +5,6 @@ class Flatten(nn.Module):
     def forward(self, input):
         return input.view(input.size(0), -1)
 
-class ResidualBlock1d(torch.nn.Module):
-    def __init__(self, channels, weight_init_gain = 1.0):
-        super(ResidualBlock1d, self).__init__()
-
-        
-        self.conv0  = nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1)
-        self.act0   = nn.ReLU()
-        self.conv1  = nn.Conv1d(channels, channels, kernel_size=3, stride=1, padding=1)
-        self.act1   = nn.ReLU()
-            
-        torch.nn.init.xavier_uniform_(self.conv0.weight, gain=weight_init_gain)
-        torch.nn.init.xavier_uniform_(self.conv1.weight, gain=weight_init_gain)
-
-
-    def forward(self, x):
-        y  = self.conv0(x)
-        y  = self.act0(y)
-        y  = self.conv1(y)
-        y  = self.act1(y + x)
-        
-        return y
-        
 class Model(torch.nn.Module):
     def __init__(self, input_shape, outputs_count, kernels_count = 32, hidden_count = 256):
         super(Model, self).__init__()
@@ -43,9 +21,6 @@ class Model(torch.nn.Module):
             nn.Conv1d(self.channels + outputs_count, kernels_count, kernel_size=8, stride=4, padding=2),
             nn.ReLU(),
 
-            ResidualBlock1d(kernels_count),
-            ResidualBlock1d(kernels_count),
-
             Flatten(),
 
             nn.Linear(fc_count, hidden_count),
@@ -55,8 +30,8 @@ class Model(torch.nn.Module):
 
        
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
-        torch.nn.init.xavier_uniform_(self.layers[5].weight)
-        torch.nn.init.uniform_(self.layers[7].weight, -0.003, 0.003)
+        torch.nn.init.xavier_uniform_(self.layers[3].weight)
+        torch.nn.init.uniform_(self.layers[5].weight, -0.003, 0.003)
  
         self.model = nn.Sequential(*self.layers) 
         self.model.to(self.device)

@@ -6,7 +6,7 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 class Model(torch.nn.Module):
-    def __init__(self, input_shape, outputs_count, hidden_count = 512):
+    def __init__(self, input_shape, outputs_count, kernels_count = 32, hidden_count = 256):
         super(Model, self).__init__()
 
         self.device = "cpu"
@@ -15,20 +15,23 @@ class Model(torch.nn.Module):
         self.channels   = input_shape[0]
         self.width      = input_shape[1]
 
+        fc_count        = kernels_count*self.width//4
+
         self.layers = [ 
-            nn.Linear(self.channels*self.width  + outputs_count, hidden_count),
+            nn.Conv1d(self.channels + outputs_count, kernels_count, kernel_size=8, stride=4, padding=2),
+            nn.ReLU(),
+
+            Flatten(),
+
+            nn.Linear(fc_count, hidden_count),
             nn.ReLU(),            
-
-            nn.Linear(hidden_count, hidden_count//2),
-            nn.ReLU(),     
-
-            nn.Linear(hidden_count//2, 1)           
+            nn.Linear(hidden_count, 1)           
         ] 
 
        
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
-        torch.nn.init.xavier_uniform_(self.layers[2].weight)
-        torch.nn.init.uniform_(self.layers[4].weight, -0.003, 0.003)
+        torch.nn.init.xavier_uniform_(self.layers[3].weight)
+        torch.nn.init.uniform_(self.layers[5].weight, -0.003, 0.003)
  
         self.model = nn.Sequential(*self.layers) 
         self.model.to(self.device)
@@ -39,7 +42,8 @@ class Model(torch.nn.Module):
        
 
     def forward(self, state, action):
-        x   = torch.cat([state.view(state.size(0), -1), action], dim = 1) 
+        a_  = action.unsqueeze(2).repeat(1, 1, state.shape[2])
+        x   = torch.cat([state, a_], dim = 1) 
       
         return self.model(x)
 
@@ -55,7 +59,7 @@ class Model(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    batch_size      = 10
+    batch_size      = 1
     input_shape     = (6, 32)
     outputs_count   = 5
 
