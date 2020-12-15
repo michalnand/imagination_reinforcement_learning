@@ -8,10 +8,9 @@ import libs_agents
 from libs_common.Training import *
 from libs_common.atari_wrapper import *
 
-import models.dqn_imagination.src.model_forward     as ModelForward
 import models.dqn_imagination.src.model_dqn         as ModelDQN
+import models.dqn_imagination.src.model_im          as ModelIM
 import models.dqn_imagination.src.config            as Config
-
 
 path = "models/dqn_imagination/"
 
@@ -20,8 +19,7 @@ env = gym.make("MsPacmanNoFrameskip-v4")
 env = AtariWrapper(env)
 env.reset()
 
-
-agent = libs_agents.AgentDQNImagination(env, ModelDQN, ModelForward, Config)
+agent = libs_agents.AgentDQNImagination(env, ModelDQN, ModelIM, Config)
 
 max_iterations = 10*(10**6) 
 

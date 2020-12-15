@@ -4,7 +4,7 @@ from .ExperienceBuffer import *
 
 
 class AgentDQNImagination():
-    def __init__(self, env, Modeldqn, ModelForward, Config):
+    def __init__(self, env, Modeldqn, ModelIM, Config):
         self.env    = env
         config      = Config.Config()
 
@@ -15,7 +15,7 @@ class AgentDQNImagination():
         self.target_update      = config.target_update
         self.update_frequency   = config.update_frequency 
 
-        self.trajectory_length      = config.trajectory_length
+        self.rollouts               = config.rollouts
         self.entropy_beta           = config.entropy_beta
         self.curiosity_beta         = config.curiosity_beta
 
@@ -29,24 +29,20 @@ class AgentDQNImagination():
         for target_param, param in zip(self.model_dqn_target.parameters(), self.model_dqn.parameters()):
             target_param.data.copy_(param.data)
 
-        self.model_forward      = ModelForward.Model(self.state_shape,    self.actions_count)
+        self.model_im       = ModelIM.Model(self.state_shape, self.actions_count)
 
-        self.optimizer_dqn    = torch.optim.Adam(self.model_dqn.parameters(),       lr=config.learning_rate_dqn)
-        self.optimizer_forward  = torch.optim.Adam(self.model_forward.parameters(),     lr=config.learning_rate_forward)
+        self.optimizer_dqn  = torch.optim.Adam(self.model_dqn.parameters(), lr=config.learning_rate_dqn)
+        self.optimizer_im   = torch.optim.Adam(self.model_im.parameters(),  lr=config.learning_rate_im)
         
-       
         self.state          = env.reset()
         self.iterations     = 0
         self.enable_training()
 
-
-        self.loss_dqn     = 0.0
-        self.loss_forward   = 0.0
+        self.loss_dqn       = 0.0
+        self.loss_im   = 0.0
         self.entropy        = 0.0
         self.curiosity      = 0.0
         
-
-
     def enable_training(self):
         self.enabled_training = True
 
@@ -110,26 +106,24 @@ class AgentDQNImagination():
         state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_dqn.device)
 
         #intrinsic motivation
-        state_seq_t, action_seq_t, state_next_seq_t = self.experience_replay.sample_sequence(self.batch_size, self.trajectory_length, self.model_forward.device, True)
-
-        states_imagined_t    =  self._process_imagination(state_t, action_seq_t)
-
-        entropy_t, curiosity_t = self._intrinsic_motivation(states_imagined_t, state_next_seq_t)
-      
-      
+        curiosity_t = self._curiosity(state_t, state_next_t, action_t).detach()
+        entropy_t   = self._entropy(state_t, self.epsilon).detach()
+    
         '''
         predict next state, and compute forward model loss 
         note : forward model learns next features
         '''
         action_one_hot_t    = self._action_one_hot(action_t)
-        state_predicted     = self.model_forward(state_t, action_one_hot_t)
+        
+        action_predicted, features_state_next, features_state_next_predicted = self.model_im(state_t, state_next_t, action_one_hot_t)
 
-        loss_forward   = ((state_next_t.detach() - state_predicted)**2)
-        loss_forward   = loss_forward.mean() 
+        #inverse model, and forward model loss
+        loss_im = 0.1*((action_one_hot_t.detach()   - action_predicted)**2).mean()
+        loss_im+= ((features_state_next.detach()    - features_state_next_predicted)**2).mean()
 
-        self.optimizer_forward.zero_grad()
-        loss_forward.backward() 
-        self.optimizer_forward.step()
+        self.optimizer_im.zero_grad()
+        loss_im.backward() 
+        self.optimizer_im.step()
 
         '''
         predict Q-values using features, and dqn model
@@ -159,18 +153,17 @@ class AgentDQNImagination():
 
         self.optimizer_dqn.step()
 
-
         '''
         log some stats, using exponential smoothing
         '''
         k = 0.02
 
-        self.loss_forward   = (1.0 - k)*self.loss_forward   + k*loss_forward.detach().to("cpu").numpy()
+        self.loss_im        = (1.0 - k)*self.loss_im   + k*loss_im.detach().to("cpu").numpy()
         self.loss_dqn       = (1.0 - k)*self.loss_dqn     + k*loss_dqn.detach().to("cpu").numpy()
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        #print(self.loss_forward, self.loss_dqn, self.entropy, self.curiosity, "\n\n")
+        #print(self.loss_im, self.loss_dqn, self.entropy, self.curiosity, "\n\n")
 
     def _sample_action(self, state_t, epsilon):
 
@@ -210,55 +203,65 @@ class AgentDQNImagination():
 
         return action_one_hot_t
 
-    def _intrinsic_motivation(self, states_imagined_t, state_target_seq_t):
-        #difference : target and predicted
-        dif     = state_target_seq_t - states_imagined_t
+    def _curiosity(self, state_t, state_next_t, action_t):
+        action_one_hot_t    = self._action_one_hot(action_t)
+        
+        _, features_state_next, features_state_next_predicted = self.model_im(state_t, state_next_t, action_one_hot_t)
 
-        #compute entropy, variance
-        if self.trajectory_length > 1:
-            entropy_t   = torch.std(dif, dim = 1).view(dif.size(0), -1).mean(dim = 1)
-        else:
-            entropy_t   = torch.zeros((self.batch_size, self.trajectory_length)).to(dif.device)
+        dif             = features_state_next - features_state_next_predicted
 
-        #compute curiosity, mean square
-        curiosity_t = (dif**2).view(dif.size(0), -1).mean(dim=1)
+        curiosity_t     = (dif**2).view(dif.size(0), -1).mean(dim=1)
+        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
 
-        #squashing and scaling
-        entropy_t       = torch.tanh(self.entropy_beta*entropy_t).detach()
-        curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t).detach()
-
-        return entropy_t, curiosity_t
+        return curiosity_t
 
 
-    def _process_imagination(self, state_initial_t, action_seq_t):
-        action_seq_t_           = action_seq_t.transpose(0, 1)
+    def _entropy(self, state_t, epsilon):
+        #fill initial state
+        states_initial_t  = torch.zeros((self.rollouts, self.batch_size) + self.state_shape).to(state_t.device)
+        for i in range(self.rollouts):
+            states_initial_t[i] = state_t.clone()
 
-        states_imagined_seq_t = torch.zeros((self.trajectory_length, self.batch_size) + self.state_shape).to(state_initial_t.device)
+        #sample actions
+        #for loop in rollouts is necessary when noisy nets used
+        actions_t  = torch.zeros((self.rollouts, self.batch_size, self.actions_count)).to(state_t.device)
+        for i in range(self.rollouts):
+            _, actions_t_ = self._sample_action(state_t, epsilon)
+            actions_t[i]  = actions_t_.clone()
 
-        states_imagined_seq_t[0] = state_initial_t.detach().clone()
+        #create one big batch for faster run
+        states_initial_t = states_initial_t.reshape((self.rollouts*self.batch_size, ) + self.state_shape)
 
-        for n in range(self.trajectory_length - 1):
-            action_one_hot_t              = self._action_one_hot(action_seq_t_[n])
-            states_imagined_seq_t[n+1]  = self.model_forward(states_imagined_seq_t[n], action_one_hot_t)
+        actions_t = actions_t.reshape((self.rollouts*self.batch_size, self.actions_count))
 
-        states_imagined_seq_t = states_imagined_seq_t.transpose(0, 1)
+        #compute predicted state
+        _, features_next_predicted_t = self.model_im.eval_next_features(states_initial_t, actions_t)
 
-        return states_imagined_seq_t
+        #reshape back, to batch, rollouts, state.shape
+        features_next_predicted_t = features_next_predicted_t.reshape((self.rollouts, self.batch_size, features_next_predicted_t.shape[1]))
+        features_next_predicted_t = features_next_predicted_t.transpose(0, 1)
+        features_next_predicted_t = features_next_predicted_t.view(features_next_predicted_t.size(0), features_next_predicted_t.size(1), -1)
+
+        #compute entropy from variance, accross rollout dimension
+        entropy_t   = torch.std(features_next_predicted_t, dim = 1).mean(dim = 1)
+ 
+        entropy_t   = torch.tanh(self.entropy_beta*entropy_t)
+
+        return entropy_t
+
 
     def save(self, save_path):
-        self.model_forward.save(save_path)
+        self.model_im.save(save_path)
         self.model_dqn.save(save_path)
 
     def load(self, load_path):
-        self.model_forward.load(load_path)
+        self.model_im.load(load_path)
         self.model_dqn.load(load_path)
 
     def get_log(self):
         result = "" 
-        result+= str(round(self.loss_forward, 7)) + " "
+        result+= str(round(self.loss_im, 7)) + " "
         result+= str(round(self.loss_dqn, 7)) + " "
         result+= str(round(self.entropy, 7)) + " "
         result+= str(round(self.curiosity, 7)) + " "
-
-
         return result
