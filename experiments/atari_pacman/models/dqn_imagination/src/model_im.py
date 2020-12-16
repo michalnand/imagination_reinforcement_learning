@@ -26,11 +26,11 @@ class Model(torch.nn.Module):
             nn.ReLU(),
             nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Flatten() 
+            nn.Flatten()  
         ]
 
         self.layers_inverse = [
@@ -40,9 +40,9 @@ class Model(torch.nn.Module):
         ]
 
         self.layers_forward = [
-            nn.Linear(self.features_count + outputs_count, 1024),
+            nn.Linear(self.features_count + outputs_count, 2048),
             nn.ReLU(),
-            nn.Linear(1024, self.features_count)
+            nn.Linear(2048, self.features_count)
         ]
 
         for i in range(len(self.layers_features)):
