@@ -64,16 +64,16 @@ class ExperienceBufferContinuous():
         done_t          = torch.zeros(done_shape,  dtype=torch.float32)
 
         self.indices = []
-        for i in range(batch_size):
+        for ib in range(batch_size):
             self.indices.append(numpy.random.randint(self.length() - 1))
 
-        for i in range(batch_size):
-            n               = self.indices[i]
-            state_t[i]      = torch.from_numpy(self.state_b[n])
-            action_t[i]     = torch.from_numpy(self.action_b[n])
-            reward_t[i]     = torch.from_numpy(numpy.asarray(self.reward_b[n]))
-            state_next_t[i] = torch.from_numpy(self.state_b[n+1])
-            done_t[i]       = torch.from_numpy(numpy.asarray(self.done_b[n]))
+        for b in range(batch_size):
+            n               = self.indices[b]
+            state_t[b]      = torch.from_numpy(self.state_b[n])
+            action_t[b]     = torch.from_numpy(self.action_b[n])
+            reward_t[b]     = torch.from_numpy(numpy.asarray(self.reward_b[n]))
+            state_next_t[b] = torch.from_numpy(self.state_b[n+1])
+            done_t[b]       = torch.from_numpy(numpy.asarray(self.done_b[n]))
 
         state_t         = state_t.to(device).detach()
         action_t        = action_t.to(device).detach()
@@ -89,19 +89,19 @@ class ExperienceBufferContinuous():
         
         state_t         = torch.zeros(state_shape,  dtype=torch.float32)
         action_t        = torch.zeros(action_shape,  dtype=torch.float32)
-        state_next_t    = torch.zeros(state_shape,  dtype=torch.float32)
+        state_next_t    = torch.zeros(self.state_b[0].shape[0:],  dtype=torch.float32)
 
         for b in range(batch_size):
             if use_indices:
                 n = self.indices[b]
             else:
-                n  = numpy.random.randint(self.length() - 1 - sequence_length)
+                n  = sequence_length + numpy.random.randint(self.length() - 1 - sequence_length)
 
-            if n < self.length() - 1 - sequence_length:
-                for s in range(sequence_length):
-                    state_t[b][s]      = torch.from_numpy(self.state_b[n + s])
-                    action_t[b][s]     = torch.from_numpy(self.action_b[n + s])
-                    state_next_t[b][s] = torch.from_numpy(self.state_b[n + 1 + s])
+            for s in reversed(range(sequence_length)):
+                state_t[b][s]      = torch.from_numpy(self.state_b[n - s])
+                action_t[b][s]     = torch.from_numpy(self.action_b[n - s])
+
+            state_next_t[b] = torch.from_numpy(self.state_b[n+1])
 
         state_t         = state_t.to(device).detach()
         action_t        = action_t.to(device).detach()
