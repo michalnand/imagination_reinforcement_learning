@@ -19,7 +19,7 @@ class Model(torch.nn.Module):
         input_height    = self.input_shape[1]
         input_width     = self.input_shape[2]
 
-        self.features_count = 32*(input_height//16)*(input_width//16)
+        self.features_count = 64*(input_height//16)*(input_width//16)
 
         self.layers_features = [
             nn.Conv2d(input_channels, 32, kernel_size=3, stride=2, padding=1),
