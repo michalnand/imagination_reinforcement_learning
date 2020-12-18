@@ -83,13 +83,14 @@ class ExperienceBufferContinuous():
 
         return state_t, action_t, reward_t, state_next_t, done_t
 
-    def sample_sequence(self, batch_size, sequence_length, device, use_indices = False):
-        state_shape     = (batch_size, sequence_length) + self.state_b[0].shape[0:]
-        action_shape    = (batch_size, sequence_length) + self.action_b[0].shape[0:]
+    def sample_sequence(self, batch_size, sequence_length, device, use_indices = True):
+        state_seq_shape     = (batch_size, sequence_length) + self.state_b[0].shape[0:]
+        action_seq_shape    = (batch_size, sequence_length) + self.action_b[0].shape[0:]
+        state_shape         = (batch_size, ) + self.state_b[0].shape[0:]
         
-        state_t         = torch.zeros(state_shape,  dtype=torch.float32)
-        action_t        = torch.zeros(action_shape,  dtype=torch.float32)
-        state_next_t    = torch.zeros(self.state_b[0].shape[0:],  dtype=torch.float32)
+        state_seq_t     = torch.zeros(state_seq_shape,  dtype=torch.float32)
+        action_seq_t        = torch.zeros(action_seq_shape,  dtype=torch.float32)
+        state_next_t    = torch.zeros(state_shape,  dtype=torch.float32)
 
         for b in range(batch_size):
             if use_indices:
@@ -98,16 +99,16 @@ class ExperienceBufferContinuous():
                 n  = sequence_length + numpy.random.randint(self.length() - 1 - sequence_length)
 
             for s in reversed(range(sequence_length)):
-                state_t[b][s]      = torch.from_numpy(self.state_b[n - s])
-                action_t[b][s]     = torch.from_numpy(self.action_b[n - s])
+                state_seq_t[b][s]      = torch.from_numpy(self.state_b[n - s])
+                action_seq_t[b][s]     = torch.from_numpy(self.action_b[n - s])
 
             state_next_t[b] = torch.from_numpy(self.state_b[n+1])
-
-        state_t         = state_t.to(device).detach()
-        action_t        = action_t.to(device).detach()
+ 
+        state_seq_t     = state_seq_t.to(device).detach()
+        action_seq_t    = action_seq_t.to(device).detach()
         state_next_t    = state_next_t.to(device).detach()
 
-        return state_t, action_t, state_next_t
+        return state_seq_t, action_seq_t, state_next_t
     
 if __name__ == "__main__":
     state_shape     = (3, 13, 17)

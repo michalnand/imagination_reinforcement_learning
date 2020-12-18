@@ -27,7 +27,7 @@ trainig = TrainingIterations(env, agent, max_iterations, path, 10000)
 trainig.run() 
 
 '''
-#agent.load(path)
+agent.load(path)
 agent.disable_training()
 while True:
     reward, done = agent.main(False)
