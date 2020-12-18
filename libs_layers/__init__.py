@@ -5,5 +5,5 @@ from .LSTM import *
 from .GRU import *
 
 #from .HebbianLinear import *
-#from .DynamicStateGraph import *
-#from .GConv import *
+from .DynamicStateGraph import *
+from .GConv import *

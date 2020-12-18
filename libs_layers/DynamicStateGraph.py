@@ -2,6 +2,8 @@ import numpy
 import matplotlib.pyplot as plt
 import networkx as nx
 
+import torch
+
 class DynamicGraphState:
 
     def __init__(self, state_size, alpha = 0.01):
@@ -29,6 +31,11 @@ class DynamicGraphState:
         self.edge_index         = numpy.concatenate([m0, m1], axis=1)
         self.adjacency_matrix   = numpy.array(numpy.sign(nx.adjacency_matrix(self.graph).todense()))
 
+    def train_batch(self, state_batch):
+        batch_size      = state_batch.shape[0]
+        for b in range(batch_size):
+            self.train(state_batch[b])
+
     def eval(self, state):
         state_          = numpy.expand_dims(state, 0)
         state_masked    = state_*self.adjacency_matrix
@@ -43,6 +50,20 @@ class DynamicGraphState:
             state_masked[b], _, _ = self.eval(state_batch[b])
 
         return state_masked, self.adjacency_matrix, self.edge_index
+
+    def eval_torch(self, state, train = False):
+
+        device = state.device
+        if train:
+            self.train_batch(state.detach().to("cpu").numpy())
+
+        state_masked, adjacency_matrix, edge_index = self.eval_batch(state)
+
+        state_masked = torch.from_numpy(state_masked).to(device).float()
+        edge_index   = torch.from_numpy(edge_index).to(device)
+
+        return state_masked, edge_index
+
 
     def _minimum_spanning_tree(self, adjacency_matrix):
         gr      = nx.from_numpy_matrix(numpy.matrix(adjacency_matrix))
