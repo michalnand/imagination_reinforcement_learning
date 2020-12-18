@@ -85,12 +85,25 @@ for CUDA different packages are reuired :
 - this is for cuda 10.2
 - and pytorch 1.6
 
+detect pytorch cuda version
 
-pip3 install torch-scatter==latest+cu102 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
-pip3 install torch-sparse==latest+cu102 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
-pip3 install torch-cluster==latest+cu102 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
-pip3 install torch-spline-conv==latest+cu102 -f https://pytorch-geometric.com/whl/torch-1.6.0.html
+python3 -c "import torch; print(torch.__version__)"
+python3 -c "import torch; print(torch.version.cuda)"
+
+pip3 install torch-scatter -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+pip3 install torch-sparse -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+pip3 install torch-cluster -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
+pip3 install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-${TORCH}+${CUDA}.html
 pip3 install torch-geometric
+
+example for torch 1.7.0 and cuda 10.2
+
+pip3 install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.7.0+cu102.html
+pip3 install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.7.0+cu102.html
+pip3 install torch-cluster -f https://pytorch-geometric.com/whl/torch-1.7.0+cu102.html
+pip3 install torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.7.0+cu102.html
+pip3 install torch-geometric
+
 
 see https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
 
