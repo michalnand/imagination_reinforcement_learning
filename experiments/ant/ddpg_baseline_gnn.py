@@ -17,7 +17,7 @@ import models.ddpg_baseline_gnn.model.src.config           as Config
 path = "models/ddpg_baseline_gnn/model/"
 
 env = pybullet_envs.make("AntBulletEnv-v0")
-env.render()
+#env.render()
 
 agent = libs_agents.AgentDDPG(env, ModelCritic, ModelActor, Config)
 

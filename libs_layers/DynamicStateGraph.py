@@ -54,10 +54,12 @@ class DynamicGraphState:
     def eval_torch(self, state, train = False):
 
         device = state.device
-        if train:
-            self.train_batch(state.detach().to("cpu").numpy())
 
-        state_masked, adjacency_matrix, edge_index = self.eval_batch(state)
+        state_np = state.detach().to("cpu").numpy()
+        if train:
+            self.train_batch(state_np)
+
+        state_masked, adjacency_matrix, edge_index = self.eval_batch(state_np)
 
         state_masked = torch.from_numpy(state_masked).to(device).float()
         edge_index   = torch.from_numpy(edge_index).to(device)
