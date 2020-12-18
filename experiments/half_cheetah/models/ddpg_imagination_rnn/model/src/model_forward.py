@@ -7,7 +7,8 @@ class Model(torch.nn.Module):
     def __init__(self, input_shape, outputs_count, hidden_count = 256, layers_count=1):
         super(Model, self).__init__()
 
-        self.device = "cpu"
+        #self.device = "cpu"
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.layers_count   = layers_count
         self.hidden_count   = hidden_count
@@ -30,8 +31,8 @@ class Model(torch.nn.Module):
         x = torch.cat([state_seq, action_seq], dim = 2) 
 
         #initial cell state
-        h0 = torch.zeros(self.layers_count, x.size(0), self.hidden_count).requires_grad_()
-        c0 = torch.zeros(self.layers_count, x.size(0), self.hidden_count).requires_grad_()
+        h0 = torch.zeros(self.layers_count, x.size(0), self.hidden_count).requires_grad_().to(x.device)
+        c0 = torch.zeros(self.layers_count, x.size(0), self.hidden_count).requires_grad_().to(x.device)
 
         l_out, (hidden, cell) = self.model_lstm(x, (h0.detach(), c0.detach()))
 

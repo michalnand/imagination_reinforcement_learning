@@ -11,7 +11,8 @@ class Model(torch.nn.Module):
     def __init__(self, input_shape, outputs_count, hidden_count = 256):
         super(Model, self).__init__()
 
-        self.device = "cpu"
+        #self.device = "cpu"
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.layers = [     
             nn.Linear(input_shape[0], hidden_count),
