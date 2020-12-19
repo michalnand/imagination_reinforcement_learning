@@ -20,7 +20,7 @@ class Model(torch.nn.Module):
         self.model_graph    = libs_layers.GConvSeq([inputs_count, hidden_count, hidden_count], self.device)
         
         self.layers_output  = [
-            nn.Linear(hidden_count, input_shape[0])
+            nn.Linear(inputs_count*hidden_count, input_shape[0])
         ]
         
         torch.nn.init.xavier_uniform_(self.layers_output[0].weight)
@@ -51,12 +51,12 @@ class Model(torch.nn.Module):
     def save(self, path):
         print("saving to ", path)
         
-        self.model_graph.save("trained/model_forward_graph_")
+        self.model_graph.save(path + "trained/model_forward_graph_")
         torch.save(self.model_output.state_dict(), path + "trained/model_forward_output.pt")
 
     def load(self, path):       
         print("loading from ", path)
-        self.model_graph.load("trained/model_forward_graph_")
+        self.model_graph.load(path + "trained/model_forward_graph_")
         self.model_graph.eval()
 
         self.model_output.load_state_dict(torch.load(path + "trained/model_forward_output.pt", map_location = self.device))
