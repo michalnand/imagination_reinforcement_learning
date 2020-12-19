@@ -18,7 +18,7 @@ import models.ddpg_imagination_gnn.model.src.config           as Config
 path = "models/ddpg_imagination_gnn/model/"
 
 env = pybullet_envs.make("AntBulletEnv-v0")
-env.render()
+#env.render()
 
 agent = libs_agents.AgentDDPGImagination(env, ModelCritic, ModelActor, ModelForward, Config)
 
