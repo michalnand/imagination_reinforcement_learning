@@ -10,12 +10,12 @@ import libs_agents
 from libs_common.Training import *
 
 
-import models.ddpg_imagination_gnn.model.src.model_critic     as ModelCritic
-import models.ddpg_imagination_gnn.model.src.model_actor      as ModelActor
-import models.ddpg_imagination_gnn.model.src.model_forward    as ModelForward
-import models.ddpg_imagination_gnn.model.src.config           as Config
+import models.ddpg_imagination_b.model.src.model_critic     as ModelCritic
+import models.ddpg_imagination_b.model.src.model_actor      as ModelActor
+import models.ddpg_imagination_b.model.src.model_forward    as ModelForward
+import models.ddpg_imagination_b.model.src.config           as Config
 
-path = "models/ddpg_imagination_gnn/model/"
+path = "models/ddpg_imagination_b/model/"
 
 env = pybullet_envs.make("AntBulletEnv-v0")
 #env.render()

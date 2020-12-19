@@ -5,8 +5,7 @@ class Model(torch.nn.Module):
     def __init__(self, input_shape, outputs_count, hidden_count = 256):
         super(Model, self).__init__()
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+        self.device = "cpu"
 
         self.layers = [ 
             nn.Linear(input_shape[0] + outputs_count, hidden_count),
@@ -14,7 +13,7 @@ class Model(torch.nn.Module):
             nn.Linear(hidden_count, hidden_count//2),
             nn.ReLU(),            
             nn.Linear(hidden_count//2, 1)           
-        ] 
+        ]  
 
         torch.nn.init.xavier_uniform_(self.layers[0].weight)
         torch.nn.init.xavier_uniform_(self.layers[2].weight)
@@ -34,11 +33,9 @@ class Model(torch.nn.Module):
 
      
     def save(self, path):
-        print("saving to ", path)
         torch.save(self.model.state_dict(), path + "trained/model_critic.pt")
 
     def load(self, path):       
-        print("loading from ", path)
         self.model.load_state_dict(torch.load(path + "trained/model_critic.pt", map_location = self.device))
         self.model.eval()  
     

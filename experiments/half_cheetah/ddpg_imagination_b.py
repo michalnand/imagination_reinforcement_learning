@@ -10,17 +10,17 @@ import libs_agents
 from libs_common.Training import *
 
 
-import models.ddpg_imagination_rnn.model.src.model_critic     as ModelCritic
-import models.ddpg_imagination_rnn.model.src.model_actor      as ModelActor
-import models.ddpg_imagination_rnn.model.src.model_forward    as ModelForward
-import models.ddpg_imagination_rnn.model.src.config           as Config
+import models.ddpg_imagination_b.model.src.model_critic     as ModelCritic
+import models.ddpg_imagination_b.model.src.model_actor      as ModelActor
+import models.ddpg_imagination_b.model.src.model_forward    as ModelForward
+import models.ddpg_imagination_b.model.src.config           as Config
 
-path = "models/ddpg_imagination_rnn/model/"
+path = "models/ddpg_imagination_b/model/"
 
 env = pybullet_envs.make("HalfCheetahBulletEnv-v0")
 #env.render()
 
-agent = libs_agents.AgentDDPGImaginationRNN(env, ModelCritic, ModelActor, ModelForward, Config)
+agent = libs_agents.AgentDDPGImagination(env, ModelCritic, ModelActor, ModelForward, Config)
 
 max_iterations = 6*(10**6)
 trainig = TrainingIterations(env, agent, max_iterations, path, 10000)

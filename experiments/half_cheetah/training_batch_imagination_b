@@ -1,0 +1,17 @@
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_0
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_1
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_2
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_3
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_4
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_5
+#python3 ddpg_imagination_b.py
+#cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_6
+
+python3 ddpg_imagination_b.py
+cp -r models/ddpg_imagination_b/model/  models/ddpg_imagination_b/run_7
