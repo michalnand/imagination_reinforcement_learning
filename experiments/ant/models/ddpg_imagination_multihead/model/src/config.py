@@ -9,7 +9,8 @@ class Config():
         self.batch_size          = 64
         self.update_frequency    = 4
 
-        self.exploration   = libs_common.decay.Const(0.05, 0.05)
+        #self.exploration   = libs_common.decay.Const(0.05, 0.05)
+        self.exploration   = libs_common.decay.Linear(1000000, 0.3, 0.05, 0.05)
 
         self.experience_replay_size = 200000
 
@@ -20,6 +21,5 @@ class Config():
       
 
         self.rollouts               = 16
-        self.trajectory_length      = 4
-        self.entropy_beta           = 1.0
-        self.curiosity_beta         = 1.0
+        self.entropy_beta           = 10.0
+        self.curiosity_beta         = 10.0
