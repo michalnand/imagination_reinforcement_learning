@@ -27,7 +27,7 @@ class Head(torch.nn.Module):
         print(self.model)
 
     def forward(self, x):
-        return self.model(x) + state
+        return self.model(x) + x
 
     def save(self, file_name_prefix):
         torch.save(self.model.state_dict(), file_name_prefix + ".pt")
