@@ -27,7 +27,7 @@ class Head(torch.nn.Module):
         print(self.model)
 
     def forward(self, x):
-        return self.model(x) + x
+        return self.model(x)
 
     def save(self, file_name_prefix):
         torch.save(self.model.state_dict(), file_name_prefix + ".pt")
@@ -88,7 +88,7 @@ class Model(torch.nn.Module):
         s       = s.unsqueeze(2).repeat(1, 1, state.shape[1])
         y       = (s*heads).sum(dim=1)
         
-        return y
+        return y + state
 
     def save(self, path):
         torch.save(self.model_attention.state_dict(), path + "trained/model_forward_attention.pt")
