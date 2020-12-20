@@ -7,7 +7,7 @@ from .AgentDQNImagination import *
 
 from .AgentDDPG import *
 from .AgentDDPGImagination import *
-from .AgentDDPGImaginationRNN import *
+from .AgentDDPGImaginationTrajectory import *
 
 from .AgentA2C import *
 from .AgentA2CContinuous import *

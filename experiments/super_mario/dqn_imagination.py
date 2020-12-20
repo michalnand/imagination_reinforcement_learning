@@ -8,11 +8,9 @@ import libs_agents
 from libs_common.Training import *
 from libs_common.super_mario_wrapper import *
 
-
 import models.dqn_imagination.src.model_dqn         as ModelDQN
-import models.dqn_imagination.src.model_im          as ModelIM
+import models.dqn_imagination.src.model_forward     as ModelForward
 import models.dqn_imagination.src.config            as Config
-
 
 path = "models/dqn_imagination/"
 
@@ -20,8 +18,7 @@ env = gym.make("SuperMarioBros-v0")
 env = SuperMarioWrapper(env)
 env.reset()
 
-
-agent = libs_agents.AgentDQNImagination(env, ModelDQN, ModelIM, Config)
+agent = libs_agents.AgentDQNImagination(env, ModelDQN, ModelForward, Config)
 
 max_iterations = 10*(10**6)
 

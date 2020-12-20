@@ -117,16 +117,11 @@ class ClipRewardEnv(gym.Wrapper):
             self.raw_score_per_episode   = (1.0 - k)*self.raw_score_per_episode + k*self.raw_score
             self.raw_score = 0.0
 
- 
-        if done:
-            if info["flag_get"]:
-                reward+= 50.0
-            else:
-                reward+= -50.0
- 
-        reward = reward/10.0 
+        reward = numpy.clip(reward/15.0, -1.0, 1.0)
 
-        reward = numpy.clip(reward, -1.0, 1.0)
+        if numpy.abs(reward) < 0.5:
+            reward = 0.0
+
         return obs, reward, done, info
 
 

@@ -12,8 +12,8 @@ files.append("./models/dqn_baseline/result/result.log")
 rl_stats_compute_dqn = RLStatsCompute(files, result_path + "dqn_baseline.log")
 
 files = []
-files.append("./models/dqn_imagination_old/result/result.log")
-rl_stats_compute_imagination = RLStatsCompute(files, result_path + "dqn_imagination_old.log") 
+files.append("./models/dqn_imagination/result/result.log")
+rl_stats_compute_imagination = RLStatsCompute(files, result_path + "dqn_imagination.log") 
 
 
 

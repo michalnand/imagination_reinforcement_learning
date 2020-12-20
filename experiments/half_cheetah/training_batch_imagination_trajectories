@@ -1,0 +1,16 @@
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_0
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_1
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_2
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_3
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_4
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_5
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_6
+python3 ddpg_imagination_trajectories.py
+cp -r models/ddpg_imagination_trajectories/model/  models/ddpg_imagination_trajectories/run_7

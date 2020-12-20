@@ -4,7 +4,7 @@ from .ExperienceBuffer import *
 
 
 class AgentDQNImagination():
-    def __init__(self, env, Modeldqn, ModelIM, Config):
+    def __init__(self, env, Modeldqn, ModelForward, Config):
         self.env    = env
         config      = Config.Config()
 
@@ -27,19 +27,19 @@ class AgentDQNImagination():
         self.model_dqn             = Modeldqn.Model(self.state_shape, self.actions_count)
         self.model_dqn_target      = Modeldqn.Model(self.state_shape, self.actions_count)
         for target_param, param in zip(self.model_dqn_target.parameters(), self.model_dqn.parameters()):
-            target_param.data.copy_(param.data)
+            target_param.data.copy_(param.data) 
 
-        self.model_im       = ModelIM.Model(self.state_shape, self.actions_count)
+        self.model_forward       = ModelForward.Model(self.state_shape, self.actions_count)
 
         self.optimizer_dqn  = torch.optim.Adam(self.model_dqn.parameters(), lr=config.learning_rate_dqn)
-        self.optimizer_im   = torch.optim.Adam(self.model_im.parameters(),  lr=config.learning_rate_im)
+        self.optimizer_forward   = torch.optim.Adam(self.model_forward.parameters(),  lr=config.learning_rate_im)
         
         self.state          = env.reset()
         self.iterations     = 0
         self.enable_training()
 
         self.loss_dqn       = 0.0
-        self.loss_im   = 0.0
+        self.loss_forward   = 0.0
         self.entropy        = 0.0
         self.curiosity      = 0.0
         
@@ -111,19 +111,16 @@ class AgentDQNImagination():
     
         '''
         predict next state, and compute forward model loss 
-        note : forward model learns next features
         '''
-        action_one_hot_t    = self._action_one_hot(action_t)
-        
-        action_predicted, features_state_next, features_state_next_predicted = self.model_im(state_t, state_next_t, action_one_hot_t)
+        action_one_hot_t        = self._action_one_hot(action_t)
+        state_next_predicted_t  = self.model_forward(state_t.detach(), action_one_hot_t.detach())
 
-        #inverse model, and forward model loss
-        loss_im = 0.1*((action_one_hot_t.detach()   - action_predicted)**2).mean()
-        loss_im+= ((features_state_next.detach()    - features_state_next_predicted)**2).mean()
+        loss_forward = (state_next_t.detach() - state_next_predicted_t)**2
+        loss_forward = loss_forward.mean()
 
-        self.optimizer_im.zero_grad()
-        loss_im.backward() 
-        self.optimizer_im.step()
+        self.optimizer_forward.zero_grad()
+        loss_forward.backward() 
+        self.optimizer_forward.step()
 
         '''
         predict Q-values using features, and dqn model
@@ -158,12 +155,12 @@ class AgentDQNImagination():
         '''
         k = 0.02
 
-        self.loss_im        = (1.0 - k)*self.loss_im   + k*loss_im.detach().to("cpu").numpy()
-        self.loss_dqn       = (1.0 - k)*self.loss_dqn     + k*loss_dqn.detach().to("cpu").numpy()
+        self.loss_forward   = (1.0 - k)*self.loss_forward   + k*loss_forward.detach().to("cpu").numpy()
+        self.loss_dqn       = (1.0 - k)*self.loss_dqn       + k*loss_dqn.detach().to("cpu").numpy()
         self.entropy        = (1.0 - k)*self.entropy        + k*entropy_t.mean().detach().to("cpu").numpy()
         self.curiosity      = (1.0 - k)*self.curiosity      + k*curiosity_t.mean().detach().to("cpu").numpy()
 
-        #print(self.loss_im, self.loss_dqn, self.entropy, self.curiosity, "\n\n")
+        #print(self.loss_forward, self.loss_dqn, self.entropy, self.curiosity, "\n\n")
 
     def _sample_action(self, state_t, epsilon):
 
@@ -206,9 +203,9 @@ class AgentDQNImagination():
     def _curiosity(self, state_t, state_next_t, action_t):
         action_one_hot_t    = self._action_one_hot(action_t)
         
-        _, features_state_next, features_state_next_predicted = self.model_im(state_t, state_next_t, action_one_hot_t)
+        state_next_predicted_t = self.model_forward(state_t, action_one_hot_t)
 
-        dif             = features_state_next - features_state_next_predicted
+        dif             = state_next_t - state_next_predicted_t
 
         curiosity_t     = (dif**2).view(dif.size(0), -1).mean(dim=1)
         curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
@@ -235,32 +232,37 @@ class AgentDQNImagination():
         actions_t = actions_t.reshape((self.rollouts*self.batch_size, self.actions_count))
 
         #compute predicted state
-        _, features_next_predicted_t = self.model_im.eval_next_features(states_initial_t, actions_t)
+        state_next_predicted_t = self.model_forward(states_initial_t, actions_t)
+
 
         #reshape back, to batch, rollouts, state.shape
-        features_next_predicted_t = features_next_predicted_t.reshape((self.rollouts, self.batch_size, features_next_predicted_t.shape[1]))
-        features_next_predicted_t = features_next_predicted_t.transpose(0, 1)
-        features_next_predicted_t = features_next_predicted_t.view(features_next_predicted_t.size(0), features_next_predicted_t.size(1), -1)
+        state_next_predicted_t = state_next_predicted_t.reshape((self.rollouts, self.batch_size, ) + self.state_shape)
+        state_next_predicted_t = state_next_predicted_t.transpose(0, 1)
+        
+        #compute entropy across rollout dimension
+        entropy_t              = torch.std(state_next_predicted_t, dim = 1)
 
-        #compute entropy from variance, accross rollout dimension
-        entropy_t   = torch.std(features_next_predicted_t, dim = 1).mean(dim = 1)
- 
+        #flatten tensor
+        entropy_t              = entropy_t.view(entropy_t.size(0), -1) 
+        entropy_t              = entropy_t.mean(dim = 1)
+
+        #scale and squeeze values
         entropy_t   = torch.tanh(self.entropy_beta*entropy_t)
 
         return entropy_t
 
 
     def save(self, save_path):
-        self.model_im.save(save_path)
+        self.model_forward.save(save_path)
         self.model_dqn.save(save_path)
 
     def load(self, load_path):
-        self.model_im.load(load_path)
+        self.model_forward.load(load_path)
         self.model_dqn.load(load_path)
 
     def get_log(self):
         result = "" 
-        result+= str(round(self.loss_im, 7)) + " "
+        result+= str(round(self.loss_forward, 7)) + " "
         result+= str(round(self.loss_dqn, 7)) + " "
         result+= str(round(self.entropy, 7)) + " "
         result+= str(round(self.curiosity, 7)) + " "

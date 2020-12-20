@@ -12,6 +12,7 @@ class ExperienceBufferContinuous():
         self.action_b = []
         self.reward_b = []
         self.done_b   = []
+        self.intrinsic_b = []
 
     def length(self):
         return len(self.state_b)
@@ -22,7 +23,7 @@ class ExperienceBufferContinuous():
             
         return False
 
-    def add(self, state, action, reward, done):
+    def add(self, state, action, reward, done, intrinsic = 0.0):
 
         if done != 0:
             done_ = 1.0
@@ -34,11 +35,13 @@ class ExperienceBufferContinuous():
             self.action_b.append(action)
             self.reward_b.append(reward)
             self.done_b.append(done_)
+            self.intrinsic_b.append(intrinsic)
         else:
             self.state_b[self.ptr]  = state.copy()
             self.action_b[self.ptr] = action.copy()
             self.reward_b[self.ptr] = reward
             self.done_b[self.ptr]   = done_
+            self.intrinsic_b[self.ptr]   = intrinsic
 
             self.ptr = (self.ptr + 1)%self.length()
 
@@ -48,6 +51,7 @@ class ExperienceBufferContinuous():
             print(self.action_b[i], end = " ")
             print(self.reward_b[i], end = " ")
             print(self.done_b[i], end = " ")
+            print(self.intrinsic_b[i], end = " ")
             print("\n")
 
    
@@ -63,6 +67,8 @@ class ExperienceBufferContinuous():
         state_next_t    = torch.zeros(state_shape,  dtype=torch.float32)
         done_t          = torch.zeros(done_shape,  dtype=torch.float32)
 
+        intrinsic_t     = torch.zeros(reward_shape,  dtype=torch.float32)
+
         self.indices = []
         for ib in range(batch_size):
             self.indices.append(numpy.random.randint(self.length() - 1))
@@ -74,14 +80,16 @@ class ExperienceBufferContinuous():
             reward_t[b]     = torch.from_numpy(numpy.asarray(self.reward_b[n]))
             state_next_t[b] = torch.from_numpy(self.state_b[n+1])
             done_t[b]       = torch.from_numpy(numpy.asarray(self.done_b[n]))
-
+            intrinsic_t[b]  = torch.from_numpy(numpy.asarray(self.intrinsic_b[n]))
+            
         state_t         = state_t.to(device).detach()
         action_t        = action_t.to(device).detach()
         reward_t        = reward_t.to(device).detach()
         state_next_t    = state_next_t.to(device).detach()
         done_t          = done_t.to(device).detach()
+        intrinsic_t     = intrinsic_t.to(device).detach()
 
-        return state_t, action_t, reward_t, state_next_t, done_t
+        return state_t, action_t, reward_t, state_next_t, done_t, intrinsic_t
 
     def sample_sequence(self, batch_size, sequence_length, device, use_indices = True):
         state_seq_shape     = (batch_size, sequence_length) + self.state_b[0].shape[0:]

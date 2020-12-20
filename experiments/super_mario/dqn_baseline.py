@@ -17,7 +17,6 @@ env = gym.make("SuperMarioBros-v0")
 env = SuperMarioWrapper(env)
 env.reset()
 
-
 agent = libs_agents.AgentDQN(env, Model, Config)
 
 max_iterations = 10*(10**6)

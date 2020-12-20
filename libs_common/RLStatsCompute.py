@@ -61,11 +61,15 @@ class RLStatsCompute:
         episode_score       = data[4]
 
 
-        if data.shape[0] > 9:
+        if data.shape[0] == 14:
             self.forward_loss_mean, self.forward_loss_std, self.forward_loss_lower, self.forward_loss_upper = self.compute_stats(data[9])
             self.entropy_mean, self.entropy_std, self.entropy_lower, self.entropy_upper                     = self.compute_stats(data[12])
             self.curiosity_mean, self.curiosity_std, self.curiosity_lower, self.curiosity_upper             = self.compute_stats(data[13])
 
+        if data.shape[0] == 13:
+            self.forward_loss_mean, self.forward_loss_std, self.forward_loss_lower, self.forward_loss_upper = self.compute_stats(data[9])
+            self.entropy_mean, self.entropy_std, self.entropy_lower, self.entropy_upper                     = self.compute_stats(data[11])
+            self.curiosity_mean, self.curiosity_std, self.curiosity_lower, self.curiosity_upper             = self.compute_stats(data[12])
 
         self.per_iteration_score = total_score/self.iterations
 

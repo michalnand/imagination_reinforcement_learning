@@ -15,8 +15,7 @@ class Config():
         self.learning_rate_im       = 0.0002
         self.learning_rate_dqn      = 0.0001
 
-        
         self.rollouts               = 8
-        self.entropy_beta           = 10.0
-        self.curiosity_beta         = 10.0
+        self.entropy_beta           = 100.0
+        self.curiosity_beta         = 100.0
 
