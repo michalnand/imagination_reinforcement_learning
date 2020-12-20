@@ -32,7 +32,7 @@ class AgentDQNImagination():
         self.model_forward       = ModelForward.Model(self.state_shape, self.actions_count)
 
         self.optimizer_dqn  = torch.optim.Adam(self.model_dqn.parameters(), lr=config.learning_rate_dqn)
-        self.optimizer_forward   = torch.optim.Adam(self.model_forward.parameters(),  lr=config.learning_rate_im)
+        self.optimizer_forward   = torch.optim.Adam(self.model_forward.parameters(),  lr=config.learning_rate_forward)
         
         self.state          = env.reset()
         self.iterations     = 0
