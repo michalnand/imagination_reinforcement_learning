@@ -76,12 +76,12 @@ class AgentDDPGImaginationTrajectory():
         action_t, rollout_best = self._imagination_planning(actions_t, values_imagined_t)
         action     = action_t.detach().to("cpu").numpy()
 
-        entropy_t  = self._entropy(states_imagined_t).detach().numpy()
+        entropy  = self._entropy(states_imagined_t)
         
         state_new, self.reward, done, self.info = self.env.step(action)
 
         if self.enabled_training:
-            self.experience_replay.add(self.state, action, self.reward, done, entropy_t)
+            self.experience_replay.add(self.state, action, self.reward, done, entropy)
 
         if self.enabled_training and self.experience_replay.length() > 0.1*self.experience_replay.size:
             if self.iterations%self.update_frequency == 0:
@@ -110,8 +110,8 @@ class AgentDDPGImaginationTrajectory():
         #curiosity motivation
         state_next_predicted_t = self.model_forward(state_t, action_t)
 
-        curiosity_t = self._curiosity(state_next_t.detach(), state_next_predicted_t.detach())
-
+        curiosity_t = self._curiosity(state_next_t, state_next_predicted_t)
+ 
         #critic loss
         value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
         value_predicted = self.model_critic.forward(state_t, action_t)
@@ -223,14 +223,14 @@ class AgentDDPGImaginationTrajectory():
         
         entropy_t   = torch.tanh(self.entropy_beta*entropy_t)
 
-        return entropy_t
+        return entropy_t.detach().to("cpu").numpy()
 
     def _curiosity(self, state_next_t, state_predicted_t):
         dif             = state_next_t - state_predicted_t
         curiosity_t     = (dif**2).view(dif.size(0), -1).mean(dim=1)
         curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
 
-        return curiosity_t
+        return curiosity_t.detach()
     
     def save(self, save_path):
         self.model_actor.save(save_path)
