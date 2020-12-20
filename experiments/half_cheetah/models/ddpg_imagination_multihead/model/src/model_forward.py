@@ -52,7 +52,7 @@ class Model(torch.nn.Module):
             nn.Linear(hidden_count, hidden_count),
             nn.ReLU(),           
             nn.Linear(hidden_count, heads_count),
-            nn.Softmax(dim=1)
+            nn.Sigmoid()
         ]
 
         torch.nn.init.xavier_uniform_(self.layers_attention[0].weight)
