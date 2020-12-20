@@ -1,28 +1,6 @@
 import torch
 import torch.nn as nn
 
-class ResidualBlock(torch.nn.Module):
-    def __init__(self, channels, weight_init_gain = 1.0):
-        super(ResidualBlock, self).__init__()
-
-        self.conv0  = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
-        self.act0   = nn.ReLU()
-        self.conv1  = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
-        self.act1   = nn.ReLU()
-            
-        torch.nn.init.xavier_uniform_(self.conv0.weight, gain=weight_init_gain)
-        torch.nn.init.xavier_uniform_(self.conv1.weight, gain=weight_init_gain)
-
-
-    def forward(self, x):
-        y  = self.conv0(x)
-        y  = self.act0(y)
-        y  = self.conv1(y)
-        y  = self.act1(y + x)
-        
-        return y
-
-
 class AttentionBlock(torch.nn.Module):
     def __init__(self, in_channels, kernels = 16, weight_init_gain = 1.0):
         super(AttentionBlock, self).__init__()
@@ -48,6 +26,33 @@ class AttentionBlock(torch.nn.Module):
         return y
 
 
+class ResidualBlock(torch.nn.Module):
+    def __init__(self, channels, weight_init_gain = 1.0):
+        super(ResidualBlock, self).__init__()
+
+        self.conv0      = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
+        self.act0       = nn.ReLU()
+        self.conv1      = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
+        
+        self.attention  = AttentionBlock(channels, channels//2)
+
+        self.act1       = nn.ReLU()
+            
+        torch.nn.init.xavier_uniform_(self.conv0.weight, gain=weight_init_gain)
+        torch.nn.init.xavier_uniform_(self.conv1.weight, gain=weight_init_gain)
+
+
+    def forward(self, x):
+        y  = self.conv0(x)
+        y  = self.act0(y)
+        y  = self.conv1(y)
+        y  = self.attention(y)
+        y  = self.act1(y + x)
+        
+        return y
+
+
+
 class Model(torch.nn.Module):
 
     def __init__(self, input_shape, outputs_count, kernels_count = 64):
@@ -61,16 +66,9 @@ class Model(torch.nn.Module):
             nn.ReLU(),
 
             ResidualBlock(kernels_count),
-            AttentionBlock(kernels_count),
-
             ResidualBlock(kernels_count),
-            AttentionBlock(kernels_count),
-
             ResidualBlock(kernels_count),
-            AttentionBlock(kernels_count),
-
             ResidualBlock(kernels_count),
-            AttentionBlock(kernels_count),
 
             nn.ConvTranspose2d(kernels_count, kernels_count, kernel_size=8, stride=8, padding=0),
             nn.ReLU(),
