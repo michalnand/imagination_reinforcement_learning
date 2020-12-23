@@ -29,7 +29,6 @@ files.append("./models/ddpg_imagination/run_6/result/result.log")
 rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_imagination.log") 
 
 
-
 plt.cla()
 plt.ylabel("score")
 plt.xlabel("episode")

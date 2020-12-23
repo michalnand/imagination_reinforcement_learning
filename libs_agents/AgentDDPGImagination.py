@@ -98,7 +98,7 @@ class AgentDDPGImagination():
         
         
     def train_model(self):
-        state_t, action_t, reward_t, state_next_t, done_t, _ = self.experience_replay.sample(self.batch_size, self.model_critic.device)
+        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_critic.device)
         
 
         #intrinsic motivation

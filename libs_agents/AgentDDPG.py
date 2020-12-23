@@ -81,7 +81,7 @@ class AgentDDPG():
         
         
     def train_model(self):
-        state_t, action_t, reward_t, state_next_t, done_t, _ = self.experience_replay.sample(self.batch_size, self.model_critic.device)
+        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_critic.device)
         
         reward_t = reward_t.unsqueeze(-1)
         done_t   = (1.0 - done_t).unsqueeze(-1)

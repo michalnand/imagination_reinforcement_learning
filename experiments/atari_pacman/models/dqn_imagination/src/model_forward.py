@@ -1,31 +1,6 @@
 import torch
 import torch.nn as nn
 
-class AttentionBlock(torch.nn.Module):
-    def __init__(self, in_channels, kernels = 16, weight_init_gain = 1.0):
-        super(AttentionBlock, self).__init__()
-
-        self.in_channels = in_channels
-
-        self.conv0  = nn.Conv2d(in_channels, kernels, kernel_size=1, stride=1, padding=0)
-        self.act0   = nn.ReLU()
-        self.conv1  = nn.Conv2d(kernels, 1, kernel_size=1, stride=1, padding=0)
-        self.act1   = nn.Sigmoid()
-            
-        torch.nn.init.xavier_uniform_(self.conv0.weight, gain=weight_init_gain)
-        torch.nn.init.xavier_uniform_(self.conv1.weight, gain=weight_init_gain)
-
-    def forward(self, x):
-        y  = self.conv0(x)
-        y  = self.act0(y)
-        y  = self.conv1(y)
-        y  = self.act1(y)
-
-        y = x*(1.0 + y.repeat(1, self.in_channels, 1, 1))
-        
-        return y
-
-
 class ResidualBlock(torch.nn.Module):
     def __init__(self, channels, weight_init_gain = 1.0):
         super(ResidualBlock, self).__init__()
@@ -33,40 +8,29 @@ class ResidualBlock(torch.nn.Module):
         self.conv0      = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
         self.act0       = nn.ReLU()
         self.conv1      = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1)
-        
-        self.attention  = AttentionBlock(channels, channels//2)
-
         self.act1       = nn.ReLU()
             
         torch.nn.init.xavier_uniform_(self.conv0.weight, gain=weight_init_gain)
         torch.nn.init.xavier_uniform_(self.conv1.weight, gain=weight_init_gain)
 
-
     def forward(self, x):
         y  = self.conv0(x)
         y  = self.act0(y)
         y  = self.conv1(y)
-        y  = self.attention(y)
         y  = self.act1(y + x)
         
         return y
 
-
-
 class Model(torch.nn.Module):
-
     def __init__(self, input_shape, outputs_count, kernels_count = 64):
         super(Model, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
         self.layers = [
             nn.Conv2d(input_shape[0] + outputs_count, kernels_count, kernel_size=8, stride=8, padding=0),
             nn.ReLU(),
 
-            ResidualBlock(kernels_count),
-            ResidualBlock(kernels_count),
             ResidualBlock(kernels_count),
             ResidualBlock(kernels_count),
 
@@ -87,7 +51,6 @@ class Model(torch.nn.Module):
         print("\n\n")
 
     def forward(self, state, action):
-        
         height  = state.shape[2]
         width   = state.shape[3]
         action_ = action.unsqueeze(2).unsqueeze(2).repeat(1, 1, height, width)

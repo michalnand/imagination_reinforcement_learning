@@ -1,8 +1,0 @@
-cd atari_pacman
-./training_batch
-cd .. 
-
-cd super_mario
-./training_batch
-cd ..
-
