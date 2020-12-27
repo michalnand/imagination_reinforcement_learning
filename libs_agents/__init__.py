@@ -5,9 +5,9 @@ from .AgentDQN import *
 from .AgentDQNDuel import *
 from .AgentDQNImagination import *
 
-from .AgentDDPG import *
-from .AgentDDPGImagination import *
-from .AgentDDPGImaginationAdvanced import *
+from .AgentDDPG                     import *
+from .AgentDDPGImagination          import *
+from .AgentDDPGImaginationOnLine    import *
 
 from .AgentA2C import *
 from .AgentA2CContinuous import *

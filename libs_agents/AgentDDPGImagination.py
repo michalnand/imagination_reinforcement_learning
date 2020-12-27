@@ -195,7 +195,7 @@ class AgentDDPGImagination():
         #for loop in rollouts is necessary when noisy nets used
         actions_t  = torch.zeros((self.rollouts, self.batch_size, self.actions_count)).to(state_t.device)
         for i in range(self.rollouts):
-            actions_t_, _ = self._sample_action(state_t, epsilon)
+            actions_t_, _ = self._sample_action(state_t, epsilon) 
             actions_t[i]  = actions_t_.clone()
 
         #create one big batch for faster run

@@ -101,16 +101,18 @@ class AgentDDPGImaginationAdvanced():
         state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model_critic.device)
 
         #intrinsic motivation
-        states_imagined_t = self._imagine_states(state_t, self.epsilon).detach()
+        states_imagined_t       = self._imagine_states(state_t, self.epsilon).detach()
+        states_imagined_next_t  = self._imagine_states(state_next_t, self.epsilon).detach()
 
         curiosity_t = self._curiosity(state_t, state_next_t, action_t).detach()
         entropy_t   = self._entropy(states_imagined_t).detach()
-      
+
+        #predict next action adn q value
         reward_t = reward_t.unsqueeze(-1)
         done_t   = (1.0 - done_t).unsqueeze(-1)
 
         action_next_t   = self.model_actor_target.forward(state_next_t).detach()
-        value_next_t    = self.model_critic_target.forward(state_next_t, states_imagined_t, action_next_t).detach()
+        value_next_t    = self.model_critic_target.forward(state_next_t, states_imagined_next_t, action_next_t).detach()
 
         #critic loss
         value_target    = entropy_t + curiosity_t + reward_t + self.gamma*done_t*value_next_t
@@ -184,6 +186,9 @@ class AgentDDPGImaginationAdvanced():
 
 
     def _entropy(self, states_imagined_t):
+
+        #states_imagined_t = states_imagined_t.view(states_imagined_t.size(0), states_imagined_t.size(1), -1)
+
         #compute entropy from variance, accross rollout dimension
         entropy_t   = torch.std(states_imagined_t, dim = 1).mean(dim = 1)
 
@@ -215,7 +220,6 @@ class AgentDDPGImaginationAdvanced():
         #reshape back, to batch, rollouts, state.shape
         states_imagined_t = states_imagined_t.reshape((self.rollouts, self.batch_size, ) + self.state_shape)
         states_imagined_t = states_imagined_t.transpose(0, 1)
-        states_imagined_t = states_imagined_t.view(states_imagined_t.size(0), states_imagined_t.size(1), -1)
 
         return states_imagined_t
   

@@ -175,7 +175,7 @@ class AgentDQNImagination():
         q_random_indices_t  = torch.randint(self.actions_count, (batch_size,))
 
         #create mask, which actions will be from q_random_indices_t and which from q_max_indices_t
-        select_random_mask_t= torch.tensor((torch.rand(batch_size) < epsilon).clone(), dtype = int)
+        select_random_mask_t= torch.tensor((torch.rand(batch_size) < epsilon).clone().detach(), dtype = int)
 
         #apply mask
         action_idx_t    = select_random_mask_t*q_random_indices_t + (1 - select_random_mask_t)*q_max_indices_t
@@ -200,14 +200,15 @@ class AgentDQNImagination():
 
         return action_one_hot_t
 
-    def _curiosity(self, state_t, state_next_t, action_t):
+    def _curiosity(self, state_t, state_next_t, action_t, threshold = 0.1):
         action_one_hot_t    = self._action_one_hot(action_t)
         
         state_next_predicted_t = self.model_forward(state_t, action_one_hot_t)
 
         dif             = state_next_t - state_next_predicted_t
+        curiosity_t     = (dif**2).view(dif.size(0), -1)
 
-        curiosity_t     = (dif**2).view(dif.size(0), -1).mean(dim=1)
+        curiosity_t     = self._threshold_filter(curiosity_t)
         curiosity_t     = torch.tanh(self.curiosity_beta*curiosity_t)
 
         return curiosity_t
@@ -244,12 +245,31 @@ class AgentDQNImagination():
 
         #flatten tensor
         entropy_t              = entropy_t.view(entropy_t.size(0), -1) 
-        entropy_t              = entropy_t.mean(dim = 1)
+
+        #entropy_t              = entropy_t.mean(dim = 1)
+
+        entropy_t              = self._threshold_filter(entropy_t)
 
         #scale and squeeze values
         entropy_t   = torch.tanh(self.entropy_beta*entropy_t)
 
         return entropy_t
+
+    '''
+    only tensors with shape (batch_size, N) allowed
+    '''
+    def _threshold_filter(self, x, threshold = 0.01):
+        batch_size = x.shape[0]
+
+        result = torch.zeros(batch_size).to(x.device)
+
+        for b in range(batch_size):
+            xt  =   x[b][x[b] > threshold]  
+            
+            if len(xt) > 0:
+                result[b] = xt.mean()
+
+        return result
 
 
     def save(self, save_path):
