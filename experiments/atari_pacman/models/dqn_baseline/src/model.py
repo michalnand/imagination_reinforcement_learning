@@ -77,9 +77,9 @@ class Model(torch.nn.Module):
         ]  
 
         self.layers_advantage = [
-            libs_layers.NoisyLinear(fc_inputs_count, 512),
+            libs_layers.NoisyLinearFull(fc_inputs_count, 512),
             nn.ReLU(),                      
-            libs_layers.NoisyLinear(512, outputs_count)
+            libs_layers.NoisyLinearFull(512, outputs_count)
         ]
  
   

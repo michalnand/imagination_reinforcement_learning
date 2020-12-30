@@ -15,7 +15,7 @@ class AgentDQNImagination():
         self.target_update      = config.target_update
         self.update_frequency   = config.update_frequency 
 
-        self.rollouts               = config.rollouts
+        self.rollouts               = self.env.action_space.n
         self.entropy_beta           = config.entropy_beta
         self.curiosity_beta         = config.curiosity_beta
 
@@ -220,12 +220,10 @@ class AgentDQNImagination():
         for i in range(self.rollouts):
             states_initial_t[i] = state_t.clone()
 
-        #sample actions
-        #for loop in rollouts is necessary when noisy nets used
+        #create actions
         actions_t  = torch.zeros((self.rollouts, self.batch_size, self.actions_count)).to(state_t.device)
         for i in range(self.rollouts):
-            _, actions_t_ = self._sample_action(state_t, epsilon)
-            actions_t[i]  = actions_t_.clone()
+            actions_t[i,:,i]  = 1
 
         #create one big batch for faster run
         states_initial_t = states_initial_t.reshape((self.rollouts*self.batch_size, ) + self.state_shape)

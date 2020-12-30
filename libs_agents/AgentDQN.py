@@ -21,7 +21,7 @@ class AgentDQN():
         self.state_shape    = self.env.observation_space.shape
         self.actions_count  = self.env.action_space.n
 
-        self.experience_replay = ExperienceBuffer(config.experience_replay_size)
+        self.experience_replay = ExperienceBuffer(config.experience_replay_size, self.state_shape, self.actions_count)
 
         self.model          = Model.Model(self.state_shape, self.actions_count)
         self.model_target   = Model.Model(self.state_shape, self.actions_count)
@@ -95,7 +95,7 @@ class AgentDQN():
         cv2.waitKey(1)
         
     def train_model(self):
-        state_t, action_t, reward_t, state_next_t, done_t = self.experience_replay.sample(self.batch_size, self.model.device)
+        state_t, state_next_t, action_t, reward_t, done_t = self.experience_replay.sample(self.batch_size, self.model.device)
 
         #q values, state now, state next
         q_predicted      = self.model.forward(state_t)

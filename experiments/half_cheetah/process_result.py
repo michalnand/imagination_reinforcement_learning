@@ -30,8 +30,8 @@ rl_stats_compute_imagination = RLStatsCompute(files, result_path + "ddpg_imagina
 
 
 files = []
-files.append("./models/ddpg_imagination_online/model/result/result.log")
-rl_stats_compute_imagination_online = RLStatsCompute(files, result_path + "ddpg_imagination_online.log") 
+files.append("./models/ddpg_imagination_b/model/result/result.log")
+rl_stats_compute_imagination_b = RLStatsCompute(files, result_path + "ddpg_imagination_b.log") 
 
 
 plt.cla()
@@ -46,8 +46,8 @@ plt.fill_between(rl_stats_compute_ddpg.games_mean, rl_stats_compute_ddpg.episode
 plt.plot(rl_stats_compute_imagination.games_mean, rl_stats_compute_imagination.episode_mean, label="ddpg imagination entropy", color='green')
 plt.fill_between(rl_stats_compute_imagination.games_mean, rl_stats_compute_imagination.episode_lower, rl_stats_compute_imagination.episode_upper, color='green', alpha=0.2)
 
-plt.plot(rl_stats_compute_imagination_online.games_mean, rl_stats_compute_imagination_online.episode_mean, label="ddpg imagination entropy, online model", color='red')
-plt.fill_between(rl_stats_compute_imagination_online.games_mean, rl_stats_compute_imagination_online.episode_lower, rl_stats_compute_imagination_online.episode_upper, color='red', alpha=0.2)
+plt.plot(rl_stats_compute_imagination_b.games_mean, rl_stats_compute_imagination_b.episode_mean, label="ddpg imagination entropy, online model", color='red')
+plt.fill_between(rl_stats_compute_imagination_b.games_mean, rl_stats_compute_imagination_b.episode_lower, rl_stats_compute_imagination_b.episode_upper, color='red', alpha=0.2)
 
 
 plt.legend(loc='lower right', borderaxespad=0.)
@@ -67,8 +67,8 @@ plt.fill_between(rl_stats_compute_ddpg.iterations, rl_stats_compute_ddpg.episode
 plt.plot(rl_stats_compute_imagination.iterations, rl_stats_compute_imagination.episode_mean, label="ddpg imagination entropy", color='green')
 plt.fill_between(rl_stats_compute_imagination.iterations, rl_stats_compute_imagination.episode_lower, rl_stats_compute_imagination.episode_upper, color='green', alpha=0.2)
 
-plt.plot(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.episode_mean, label="ddpg imagination entropy", color='red')
-plt.fill_between(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.episode_lower, rl_stats_compute_imagination_online.episode_upper, color='red', alpha=0.2)
+plt.plot(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.episode_mean, label="ddpg imagination entropy", color='red')
+plt.fill_between(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.episode_lower, rl_stats_compute_imagination_b.episode_upper, color='red', alpha=0.2)
 
 plt.legend(loc='lower right', borderaxespad=0.)
 plt.savefig(result_path + "score_per_iteration.png", dpi = 300)
@@ -116,15 +116,15 @@ plt.ylabel("value")
 plt.xlabel("iteration")
 plt.grid(color='black', linestyle='-', linewidth=0.1)
 
-plt.plot(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.entropy_mean, label="entropy", color='orange')
-plt.fill_between(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.entropy_lower, rl_stats_compute_imagination_online.entropy_upper, color='orange', alpha=0.2)
+plt.plot(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.entropy_mean, label="entropy", color='orange')
+plt.fill_between(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.entropy_lower, rl_stats_compute_imagination_b.entropy_upper, color='orange', alpha=0.2)
 
 
-plt.plot(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.curiosity_mean, label="curiosity", color='green')
-plt.fill_between(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.curiosity_lower, rl_stats_compute_imagination_online.curiosity_upper, color='green', alpha=0.2)
+plt.plot(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.curiosity_mean, label="curiosity", color='green')
+plt.fill_between(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.curiosity_lower, rl_stats_compute_imagination_b.curiosity_upper, color='green', alpha=0.2)
 
 plt.legend(loc='lower right', borderaxespad=0.)
-plt.savefig(result_path + "internal_motivation_online_model.png", dpi = 300)
+plt.savefig(result_path + "internal_motivation_model_b.png", dpi = 300)
 
 
 
@@ -133,8 +133,8 @@ plt.ylabel("value")
 plt.xlabel("iteration")
 plt.grid(color='black', linestyle='-', linewidth=0.1)
 
-plt.plot(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.forward_loss_mean, label="forward model loss", color='navy')
-plt.fill_between(rl_stats_compute_imagination_online.iterations, rl_stats_compute_imagination_online.forward_loss_lower, rl_stats_compute_imagination_online.forward_loss_upper, color='navy', alpha=0.2)
+plt.plot(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.forward_loss_mean, label="forward model loss", color='navy')
+plt.fill_between(rl_stats_compute_imagination_b.iterations, rl_stats_compute_imagination_b.forward_loss_lower, rl_stats_compute_imagination_b.forward_loss_upper, color='navy', alpha=0.2)
 
 plt.legend(loc='lower right', borderaxespad=0.)
-plt.savefig(result_path + "forward_model_loss_online_model.png", dpi = 300)
+plt.savefig(result_path + "forward_model_loss_model_b.png", dpi = 300)
